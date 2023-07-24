@@ -48,10 +48,13 @@ do
     end
     facts.hl_ns = hl_ns
   end
+end
 
+local contracts = {}
+do
   ---@param ss string @stage status
   ---@param us string @unstage status
-  function facts.is_stagable(ss, us)
+  function contracts.is_stagable(ss, us)
     if ss == "?" then
       assert(us == "?", us)
       return true
@@ -70,6 +73,11 @@ do
       assert(us == "D" or us == "M")
       return true
     end
+    if ss == "M" then
+      if us == " " then return false end
+      assert(us == "M")
+      return true
+    end
     if ss == " " then
       assert(us == "M" or us == "D", us)
       return true
@@ -79,7 +87,7 @@ do
 
   ---@param ss string @stage status
   ---@param us string @unstage status
-  function facts.is_unstagable(ss, us)
+  function contracts.is_unstagable(ss, us)
     if ss == "?" then
       assert(us == "?", us)
       return false
@@ -92,6 +100,10 @@ do
       assert(us == " ", us)
       return true
     end
+    if ss == "M" then
+      assert(us == " " or us == "M", us)
+      return true
+    end
     if ss == "R" then
       assert(us == " " or us == "D" or us == "M")
       return true
@@ -102,6 +114,26 @@ do
       return false
     end
     error(string.format("unexpected status; ss=%s, us=%s", ss, us))
+  end
+
+  ---@param line string
+  ---@return string,string,string,(string?) @stage_status, unstage_status, path, renamed_path
+  function contracts.parse_status_line(line)
+    local stage_status = string.sub(line, 1, 1)
+    local unstage_status = string.sub(line, 2, 2)
+    local path, renamed_path
+    do
+      if stage_status ~= "R" then
+        path = string.sub(line, 4)
+      else
+        local splits = fn.split_iter(string.sub(line, 4), " -> ")
+        path, renamed_path = splits(), splits()
+        assert(path, path)
+        assert(renamed_path, renamed_path)
+      end
+    end
+
+    return stage_status, unstage_status, path, renamed_path
   end
 end
 
@@ -160,36 +192,6 @@ do
   function Git(root) return setmetatable({ root = root }, Prototype) end
 end
 
----@param winid integer
----@return string,string,string,(string?) @stage_status, unstage_status, path, renamed_path
-local function parse_current_entry(winid)
-  local line
-  do
-    local lnum = assert(api.nvim_win_get_cursor(winid))[1] - 1
-    local bufnr = api.nvim_win_get_buf(winid)
-    local lines = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)
-    assert(#lines == 1)
-    line = lines[1]
-    assert(#line >= 4)
-  end
-
-  local stage_status = string.sub(line, 1, 1)
-  local unstage_status = string.sub(line, 2, 2)
-  local path, renamed_path
-  do
-    if stage_status ~= "R" then
-      path = string.sub(line, 4)
-    else
-      local splits = fn.split_iter(string.sub(line, 4), " -> ")
-      path, renamed_path = splits(), splits()
-      assert(path, path)
-      assert(renamed_path, renamed_path)
-    end
-  end
-
-  return stage_status, unstage_status, path, renamed_path
-end
-
 local RHS
 do
   ---@class digits.status.RHS
@@ -215,10 +217,27 @@ do
     end
   end
 
+  ---@private
+  ---@param winid integer
+  ---@return string,string,string,(string?) @stage_status, unstage_status, path, renamed_path
+  function Prototype:parse_current_entry(winid)
+    local line
+    do
+      local lnum = assert(api.nvim_win_get_cursor(winid))[1] - 1
+      local bufnr = api.nvim_win_get_buf(winid)
+      local lines = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)
+      assert(#lines == 1)
+      line = lines[1]
+      assert(#line >= 4)
+    end
+
+    return contracts.parse_status_line(line)
+  end
+
   ---@param winid integer
   function Prototype:stage(winid)
-    local ss, us, path, renamed_path = parse_current_entry(winid)
-    if not facts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
+    local ss, us, path, renamed_path = self:parse_current_entry(winid)
+    if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
       self.git:silent_run({ "add", path })
     else
@@ -228,8 +247,8 @@ do
   end
 
   function Prototype:unstage(winid)
-    local ss, us, path, renamed_path = parse_current_entry(winid)
-    if not facts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
+    local ss, us, path, renamed_path = self:parse_current_entry(winid)
+    if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
       self.git:silent_run({ "reset", "--", path })
     else
@@ -242,8 +261,8 @@ do
 
   ---@param winid integer
   function Prototype:interactive_stage(winid)
-    local ss, us, path, renamed_path = parse_current_entry(winid)
-    if not facts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
+    local ss, us, path, renamed_path = self:parse_current_entry(winid)
+    if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
     local function on_exit() self:reload_status_to_buf() end
     if ss ~= "R" then
       self.git:floatterm_run({ "add", "--patch", path }, on_exit)
