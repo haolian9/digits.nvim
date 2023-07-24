@@ -15,6 +15,7 @@ provide some git workflows based on nvim
 * nvim 0.9.1
 * ~~libgit2: 1.6.4~~
 * ~~zig 0.10.1~~
+* haolian9/infra.nvim
 
 ## todo
 * [x] fugitive `0Git` 
