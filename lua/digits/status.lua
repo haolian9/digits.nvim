@@ -271,6 +271,11 @@ do
     end
   end
 
+  function Prototype:verbose_commit()
+    local function on_exit() self:reload_status_to_buf() end
+    self.git:floatterm_run({ "commit", "--verbose" }, on_exit)
+  end
+
   ---@param git digits.status.Git
   ---@param bufnr integer
   ---@return digits.status.RHS
@@ -292,6 +297,7 @@ return function()
     bm.n("u", function() rhs:unstage(api.nvim_get_current_win()) end)
     bm.n("r", function() rhs:reload() end)
     bm.n("p", function() rhs:interactive_stage(api.nvim_get_current_win()) end)
+    bm.n("w", function() rhs:verbose_commit() end)
   end
 
   local winid
