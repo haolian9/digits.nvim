@@ -20,7 +20,7 @@ provide some git workflows based on nvim
 ## todo
 * [x] fugitive `0Git` 
 * [ ] GV
-* [ ] git commit -v
+* [x] git commit -v
 * [ ] git blame file
 * [ ] libgit2 instead of git bin
 

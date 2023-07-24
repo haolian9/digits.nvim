@@ -1,3 +1,22 @@
+--{staged,unstaged} statuses: 3-length
+--* ? '? {path}'
+--* A 'A {path}'
+--* M 'M {path}'
+--* D 'D {path}'
+--* R 'R {path} -> {path}'
+--
+--operations on each entry
+--* add -p {path}
+--* reset -- {path}
+--* restore from HEAD
+--
+--fluent ux
+--* prefer floatwin over tab/window
+--  * proper position: editor or cursor or window
+--  * size: decided by content
+--* interactive terminal
+--* lock shadowed window
+
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local highlighter = require("infra.highlighter")
@@ -6,31 +25,10 @@ local bufmap = require("infra.keymap.buffer")
 local popupgeo = require("infra.popupgeo")
 local prefer = require("infra.prefer")
 local project = require("infra.project")
+local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
 
 local api = vim.api
-
---{staged,unstaged} statuses: 3-length
---* ? untracked '?? {path}'
---* A added/new 'A {path}'
---* M modified 'M {path}'
---* D deleted 'D {path}'
---* R renamed 'R {path} -> {path}'
---
---operations on each entry
---* add -p %
---* reset %
---* toggle-stage
---* restore from HEAD
---
---fluent ux
---* floatwin or tab
---* if floatwin
---  * proper position: editor or cursor or window
---  * size: decided by content
---* if tab
---* interactive terminal
---* lock shadowed window
 
 local facts = {}
 do
@@ -52,6 +50,8 @@ end
 
 local contracts = {}
 do
+  --todo: could be a truth table
+
   ---@param ss string @stage status
   ---@param us string @unstage status
   function contracts.is_stagable(ss, us)
@@ -61,7 +61,7 @@ do
     end
     if ss == "A" then
       if us == " " then return false end
-      assert(us == "M" or us == "A", us)
+      assert(us == "M" or us == "D", us)
       return true
     end
     if ss == "D" then
@@ -75,8 +75,39 @@ do
     end
     if ss == "M" then
       if us == " " then return false end
-      assert(us == "M")
+      assert(us == "M" or us == "D")
       return true
+    end
+    if ss == " " then
+      assert(us == "M" or us == "D", us)
+      return true
+    end
+    error(string.format("unexpected status; ss=%s, us=%s", ss, us))
+  end
+
+  function contracts.is_interactive_stagable(ss, us)
+    if ss == "?" then
+      assert(us == "?", us)
+      return false
+    end
+    if ss == "A" then
+      if us == " " then return false end
+      assert(us == "M", us)
+      return true
+    end
+    if ss == "D" then
+      assert(us == " ", us)
+      return false
+    end
+    if ss == "R" then
+      if us == " " then return false end
+      if us == "M" then return true end
+      if us == "D" then return false end
+    end
+    if ss == "M" then
+      if us == " " then return false end
+      if us == "M" then return true end
+      if us == "D" then return false end
     end
     if ss == " " then
       assert(us == "M" or us == "D", us)
@@ -93,7 +124,7 @@ do
       return false
     end
     if ss == "A" then
-      assert(us == " " or us == "M", us)
+      assert(us == " " or us == "M" or us == "D", us)
       return true
     end
     if ss == "D" then
@@ -101,11 +132,11 @@ do
       return true
     end
     if ss == "M" then
-      assert(us == " " or us == "M", us)
+      assert(us == " " or us == "M" or us == "D", us)
       return true
     end
     if ss == "R" then
-      assert(us == " " or us == "D" or us == "M")
+      assert(us == " " or us == "M" or us == "D")
       return true
     end
 
@@ -145,9 +176,14 @@ do
 
   Prototype.__index = Prototype
 
+  local mandatory_envs = {
+    LC_ALL = "C", --avoid i18n
+    GIT_CONFIG_PARAMETERS = "'color.ui=never'", --color=never
+  }
+
   ---@param args string[]
   function Prototype:silent_run(args)
-    local cp = subprocess.run("git", { args = args, cwd = self.root, env = { LC_ALL = "C" } }, false)
+    local cp = subprocess.run("git", { args = args, cwd = self.root, env = mandatory_envs }, false)
     if cp.exit_code ~= 0 then
       jelly.err("cmd='%s'; exit code=%d", fn.join(args, " "), cp.exit_code)
       error("git cmd failed")
@@ -157,7 +193,7 @@ do
   ---@param args string[]
   ---@return fun(): string?
   function Prototype:run(args)
-    local cp = subprocess.run("git", { args = args, cwd = self.root, env = { LC_ALL = "C" } }, true)
+    local cp = subprocess.run("git", { args = args, cwd = self.root, env = mandatory_envs }, true)
     if cp.exit_code ~= 0 then
       jelly.err("cmd='%s'; exit code=%d", fn.join(args, " "), cp.exit_code)
       error("git cmd failed")
@@ -165,26 +201,41 @@ do
     return cp.stdout
   end
 
-  ---@param args string[]
-  ---@param on_exit fun(job: integer, exit_code: integer, event: 'exit')
-  function Prototype:floatterm_run(args, on_exit)
-    local bufnr = api.nvim_create_buf(false, true)
-    prefer.bo(bufnr, "bufhidden", "wipe")
+  do
+    ---@param args string[]
+    ---@param jobspec {on_exit: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
+    function Prototype:floatterm_run(args, jobspec)
+      local bufnr
+      do
+        bufnr = api.nvim_create_buf(false, true)
+        prefer.bo(bufnr, "bufhidden", "wipe")
+        local function startinsert() ex("startinsert") end
+        api.nvim_create_autocmd("termopen", { buffer = bufnr, once = true, callback = startinsert })
+        --todo: i dont know why, but termopen will not be always triggered
+        api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = startinsert })
+      end
 
-    do
-      local height = vim.go.lines - 3 -- top border + bottom border + cmdline
-      -- stylua: ignore
-      local winid = api.nvim_open_win(bufnr, true, {
-        relative = "editor", style = "minimal", border = "single",
-        width = vim.go.columns, height = height, row = 0, col = 0,
-        title = string.format("gitterm://%s", table.concat(args, " "))
-      })
-      api.nvim_win_set_hl_ns(winid, facts.hl_ns)
+      local winid
+      do
+        local height = vim.go.lines - 3 -- top border + bottom border + cmdline
+        -- stylua: ignore
+        winid = api.nvim_open_win(bufnr, true, {
+          relative = "editor", style = "minimal", border = "single",
+          width = vim.go.columns, height = height, row = 0, col = 0,
+          title = string.format("gitterm://")
+        })
+        api.nvim_win_set_hl_ns(winid, facts.hl_ns)
+      end
+
+      do
+        table.insert(args, 1, "git")
+        if jobspec.env == nil then jobspec.env = {} end
+        for k, v in pairs(mandatory_envs) do
+          jobspec.env[k] = v
+        end
+        vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
+      end
     end
-
-    local cmd = fn.concrete(fn.chained({ "git" }, args))
-    vim.fn.termopen(cmd, { cwd = self.root, env = { LC_ALL = "C" }, on_exit = on_exit })
-    ex("startinsert")
   end
 
   ---@param root string
@@ -257,23 +308,68 @@ do
     self:reload_status_to_buf()
   end
 
-  function Prototype:reload() self:reload_status_to_buf() end
+  Prototype.reload = Prototype.reload_status_to_buf
 
   ---@param winid integer
   function Prototype:interactive_stage(winid)
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
-    if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
+    if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
     local function on_exit() self:reload_status_to_buf() end
     if ss ~= "R" then
-      self.git:floatterm_run({ "add", "--patch", path }, on_exit)
+      self.git:floatterm_run({ "add", "--patch", path }, { on_exit = on_exit })
     else
-      self.git:floatterm_run({ "add", "--patch", assert(renamed_path) }, on_exit)
+      self.git:floatterm_run({ "add", "--patch", assert(renamed_path) }, { on_exit = on_exit })
     end
   end
 
-  function Prototype:verbose_commit()
-    local function on_exit() self:reload_status_to_buf() end
-    self.git:floatterm_run({ "commit", "--verbose" }, on_exit)
+  do
+    function Prototype:verbose_commit()
+      local infos = {}
+      do
+        for line in self.git:run({ "status" }) do
+          table.insert(infos, "# " .. line)
+        end
+        for line in self.git:run({ "--no-pager", "diff", "--cached" }) do
+          table.insert(infos, line)
+        end
+      end
+
+      local bufnr
+      do
+        bufnr = api.nvim_create_buf(false, true)
+        prefer.bo(bufnr, "bufhidden", "wipe")
+        api.nvim_buf_set_lines(bufnr, 0, 0, false, { "" })
+        api.nvim_buf_set_lines(bufnr, 1, -1, false, infos)
+      end
+
+      local winid
+      do
+        local height = vim.go.lines - 3 -- top border + bottom border + cmdline
+        -- stylua: ignore
+        winid = api.nvim_open_win(bufnr, true, {
+          relative = "editor", style = "minimal", border = "single",
+          width = vim.go.columns, height = height, row = 0, col = 0,
+          title = "gitcommit://"
+        })
+        api.nvim_win_set_hl_ns(winid, facts.hl_ns)
+      end
+
+      api.nvim_create_autocmd("winclosed", {
+        buffer = bufnr,
+        once = true,
+        callback = function()
+          local msgs = {}
+          for i = 0, api.nvim_buf_line_count(bufnr) - 1 do
+            local line = api.nvim_buf_get_lines(bufnr, i, i + 1, false)[1]
+            if strlib.startswith(line, "#") then break end
+            table.insert(msgs, line)
+          end
+          if #msgs == 0 or msgs[1] == "" then return jelly.info("Aborting commit due to empty commit message.") end
+          local msg = table.concat(msgs, "\n")
+          self.git:floatterm_run({ "commit", "-m", msg }, { on_exit = function() self:reload_status_to_buf() end })
+        end,
+      })
+    end
   end
 
   ---@param git digits.status.Git
