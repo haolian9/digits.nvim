@@ -2,9 +2,9 @@ provide some git workflows based on nvim
 
 ## design choices
 * git cli is good, prefer it ASAP
-* focus on my personal workflow around git
+* focus on my personal workflows around git
 * utilize nvim's infrastructures to provide more convenient UX
-    * floatwin, terminal, luajit ffi
+    * tabpage/floatwin, terminal, luajit ffi
 
 ## status
 * far from complete
@@ -19,7 +19,7 @@ provide some git workflows based on nvim
 
 ## todo
 * [x] fugitive `0Git` 
-* [ ] GV
+* [ ] GV / git log
 * [x] git commit -v
 * [ ] git blame file
 * [ ] libgit2 instead of git bin
@@ -30,3 +30,5 @@ provide some git workflows based on nvim
 
 ## usage
 * `:lua require'digits'.status()` # equals fugitive's `0Git`
+* `:lua require'digits'.commit()`
+    * the COMMIT_EDITMSG is a buffer with ft=gitcommit

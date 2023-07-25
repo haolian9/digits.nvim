@@ -17,134 +17,90 @@
 --* interactive terminal
 --* lock shadowed window
 
-local ex = require("infra.ex")
+local commit = require("digits.commit")
+local facts = require("digits.facts")
 local fn = require("infra.fn")
-local highlighter = require("infra.highlighter")
+local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.status", "debug")
 local bufmap = require("infra.keymap.buffer")
 local popupgeo = require("infra.popupgeo")
 local prefer = require("infra.prefer")
-local project = require("infra.project")
-local strlib = require("infra.strlib")
-local subprocess = require("infra.subprocess")
 
 local api = vim.api
 
-local facts = {}
-do
-  do
-    local hl_ns = api.nvim_create_namespace("digits.status")
-    local hi = highlighter(hl_ns)
-    if vim.go.background == "light" then
-      hi("NormalFloat", { fg = 8 })
-      hi("WinSeparator", { fg = 243 })
-      hi("FloatTitle", { fg = 8 })
-    else
-      hi("NormalFloat", { fg = 7 })
-      hi("FloatTitle", { fg = 7 })
-      hi("WinSeparator", { fg = 243 })
-    end
-    facts.hl_ns = hl_ns
-  end
-end
-
 local contracts = {}
 do
-  --todo: could be a truth table
-
-  ---@param ss string @stage status
-  ---@param us string @unstage status
-  function contracts.is_stagable(ss, us)
-    if ss == "?" then
-      assert(us == "?", us)
-      return true
+  do
+    local truth = {
+      ["??"] = true,
+      ["A "] = false,
+      ["AM"] = true,
+      ["AD"] = true,
+      ["D "] = false,
+      ["R "] = false,
+      ["RM"] = true,
+      ["RD"] = true,
+      ["M "] = false,
+      ["MM"] = true,
+      ["MD"] = true,
+      [" M"] = true,
+      [" D"] = true,
+    }
+    ---@param ss string @stage status
+    ---@param us string @unstage status
+    function contracts.is_stagable(ss, us)
+      local bool = truth[ss .. us]
+      if bool ~= nil then return bool end
+      error(string.format("unexpected status; ss='%s', us='%s'", ss, us))
     end
-    if ss == "A" then
-      if us == " " then return false end
-      assert(us == "M" or us == "D", us)
-      return true
-    end
-    if ss == "D" then
-      assert(us == " ", us)
-      return false
-    end
-    if ss == "R" then
-      if us == " " then return false end
-      assert(us == "D" or us == "M")
-      return true
-    end
-    if ss == "M" then
-      if us == " " then return false end
-      assert(us == "M" or us == "D")
-      return true
-    end
-    if ss == " " then
-      assert(us == "M" or us == "D", us)
-      return true
-    end
-    error(string.format("unexpected status; ss=%s, us=%s", ss, us))
   end
 
-  function contracts.is_interactive_stagable(ss, us)
-    if ss == "?" then
-      assert(us == "?", us)
-      return false
+  do
+    local truth = {
+      ["??"] = false,
+      ["A "] = false,
+      ["AM"] = true,
+      ["D "] = false,
+      ["R "] = false,
+      ["RM"] = true,
+      ["RD"] = false,
+      ["M "] = false,
+      ["MM"] = true,
+      ["MD"] = false,
+      [" M"] = true,
+      [" D"] = false,
+    }
+
+    function contracts.is_interactive_stagable(ss, us)
+      local bool = truth[ss .. us]
+      if bool ~= nil then return bool end
+      error(string.format("unexpected status; ss='%s', us='%s'", ss, us))
     end
-    if ss == "A" then
-      if us == " " then return false end
-      assert(us == "M", us)
-      return true
-    end
-    if ss == "D" then
-      assert(us == " ", us)
-      return false
-    end
-    if ss == "R" then
-      if us == " " then return false end
-      if us == "M" then return true end
-      if us == "D" then return false end
-    end
-    if ss == "M" then
-      if us == " " then return false end
-      if us == "M" then return true end
-      if us == "D" then return false end
-    end
-    if ss == " " then
-      assert(us == "M" or us == "D", us)
-      return true
-    end
-    error(string.format("unexpected status; ss=%s, us=%s", ss, us))
   end
 
-  ---@param ss string @stage status
-  ---@param us string @unstage status
-  function contracts.is_unstagable(ss, us)
-    if ss == "?" then
-      assert(us == "?", us)
-      return false
+  do
+    local truth = {
+      ["??"] = false,
+      ["A "] = true,
+      ["AM"] = true,
+      ["AD"] = true,
+      ["D "] = true,
+      ["M "] = true,
+      ["MM"] = true,
+      ["MD"] = true,
+      ["R "] = true,
+      ["RM"] = true,
+      ["RD"] = true,
+      [" M"] = false,
+      [" D"] = false,
+    }
+    ---@param ss string @stage status
+    ---@param us string @unstage status
+    function contracts.is_unstagable(ss, us)
+      local bool = truth[ss .. us]
+      if bool ~= nil then return bool end
+      error(string.format("unexpected status; ss='%s', us='%s'", ss, us))
     end
-    if ss == "A" then
-      assert(us == " " or us == "M" or us == "D", us)
-      return true
-    end
-    if ss == "D" then
-      assert(us == " ", us)
-      return true
-    end
-    if ss == "M" then
-      assert(us == " " or us == "M" or us == "D", us)
-      return true
-    end
-    if ss == "R" then
-      assert(us == " " or us == "M" or us == "D")
-      return true
-    end
-
-    if ss == " " then
-      assert(us == "M" or us == "D", us)
-      return false
-    end
-    error(string.format("unexpected status; ss=%s, us=%s", ss, us))
   end
 
   ---@param line string
@@ -152,6 +108,7 @@ do
   function contracts.parse_status_line(line)
     local stage_status = string.sub(line, 1, 1)
     local unstage_status = string.sub(line, 2, 2)
+
     local path, renamed_path
     do
       if stage_status ~= "R" then
@@ -168,85 +125,10 @@ do
   end
 end
 
-local Git
-do
-  ---@class digits.status.Git
-  ---@field private root string
-  local Prototype = {}
-
-  Prototype.__index = Prototype
-
-  local mandatory_envs = {
-    LC_ALL = "C", --avoid i18n
-    GIT_CONFIG_PARAMETERS = "'color.ui=never'", --color=never
-  }
-
-  ---@param args string[]
-  function Prototype:silent_run(args)
-    local cp = subprocess.run("git", { args = args, cwd = self.root, env = mandatory_envs }, false)
-    if cp.exit_code ~= 0 then
-      jelly.err("cmd='%s'; exit code=%d", fn.join(args, " "), cp.exit_code)
-      error("git cmd failed")
-    end
-  end
-
-  ---@param args string[]
-  ---@return fun(): string?
-  function Prototype:run(args)
-    local cp = subprocess.run("git", { args = args, cwd = self.root, env = mandatory_envs }, true)
-    if cp.exit_code ~= 0 then
-      jelly.err("cmd='%s'; exit code=%d", fn.join(args, " "), cp.exit_code)
-      error("git cmd failed")
-    end
-    return cp.stdout
-  end
-
-  do
-    ---@param args string[]
-    ---@param jobspec {on_exit: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
-    function Prototype:floatterm_run(args, jobspec)
-      local bufnr
-      do
-        bufnr = api.nvim_create_buf(false, true)
-        prefer.bo(bufnr, "bufhidden", "wipe")
-        local function startinsert() ex("startinsert") end
-        api.nvim_create_autocmd("termopen", { buffer = bufnr, once = true, callback = startinsert })
-        --todo: i dont know why, but termopen will not be always triggered
-        api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = startinsert })
-      end
-
-      local winid
-      do
-        local height = vim.go.lines - 3 -- top border + bottom border + cmdline
-        -- stylua: ignore
-        winid = api.nvim_open_win(bufnr, true, {
-          relative = "editor", style = "minimal", border = "single",
-          width = vim.go.columns, height = height, row = 0, col = 0,
-          title = string.format("gitterm://")
-        })
-        api.nvim_win_set_hl_ns(winid, facts.hl_ns)
-      end
-
-      do
-        table.insert(args, 1, "git")
-        if jobspec.env == nil then jobspec.env = {} end
-        for k, v in pairs(mandatory_envs) do
-          jobspec.env[k] = v
-        end
-        vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
-      end
-    end
-  end
-
-  ---@param root string
-  ---@return digits.status.Git
-  function Git(root) return setmetatable({ root = root }, Prototype) end
-end
-
 local RHS
 do
   ---@class digits.status.RHS
-  ---@field private git digits.status.Git
+  ---@field private git digits.Git
   ---@field private bufnr integer
   local Prototype = {}
 
@@ -270,7 +152,6 @@ do
 
   ---@private
   ---@param winid integer
-  ---@return string,string,string,(string?) @stage_status, unstage_status, path, renamed_path
   function Prototype:parse_current_entry(winid)
     local line
     do
@@ -322,66 +203,14 @@ do
     end
   end
 
-  do
-    function Prototype:verbose_commit()
-      local infos = {}
-      do
-        for line in self.git:run({ "status" }) do
-          table.insert(infos, "# " .. line)
-        end
-        for line in self.git:run({ "--no-pager", "diff", "--cached" }) do
-          table.insert(infos, line)
-        end
-      end
-
-      local bufnr
-      do
-        bufnr = api.nvim_create_buf(false, true)
-        prefer.bo(bufnr, "bufhidden", "wipe")
-        api.nvim_buf_set_lines(bufnr, 0, 0, false, { "" })
-        api.nvim_buf_set_lines(bufnr, 1, -1, false, infos)
-      end
-
-      local winid
-      do
-        local height = vim.go.lines - 3 -- top border + bottom border + cmdline
-        -- stylua: ignore
-        winid = api.nvim_open_win(bufnr, true, {
-          relative = "editor", style = "minimal", border = "single",
-          width = vim.go.columns, height = height, row = 0, col = 0,
-          title = "gitcommit://"
-        })
-        api.nvim_win_set_hl_ns(winid, facts.hl_ns)
-      end
-
-      api.nvim_create_autocmd("winclosed", {
-        buffer = bufnr,
-        once = true,
-        callback = function()
-          local msgs = {}
-          for i = 0, api.nvim_buf_line_count(bufnr) - 1 do
-            local line = api.nvim_buf_get_lines(bufnr, i, i + 1, false)[1]
-            if strlib.startswith(line, "#") then break end
-            table.insert(msgs, line)
-          end
-          if #msgs == 0 or msgs[1] == "" then return jelly.info("Aborting commit due to empty commit message.") end
-          local msg = table.concat(msgs, "\n")
-          self.git:floatterm_run({ "commit", "-m", msg }, { on_exit = function() self:reload_status_to_buf() end })
-        end,
-      })
-    end
-  end
-
-  ---@param git digits.status.Git
+  ---@param git digits.Git
   ---@param bufnr integer
   ---@return digits.status.RHS
   function RHS(git, bufnr) return setmetatable({ git = git, bufnr = bufnr }, Prototype) end
 end
 
-return function()
-  local root = assert(project.git_root())
-  local git = Git(root)
-
+---@param git digits.Git
+return function(git)
   local bufnr = api.nvim_create_buf(false, true)
   prefer.bo(bufnr, "bufhidden", "wipe")
 
@@ -393,7 +222,8 @@ return function()
     bm.n("u", function() rhs:unstage(api.nvim_get_current_win()) end)
     bm.n("r", function() rhs:reload() end)
     bm.n("p", function() rhs:interactive_stage(api.nvim_get_current_win()) end)
-    bm.n("w", function() rhs:verbose_commit() end)
+    -- stylua: ignore
+    bm.n("w", function() commit(git, function() rhs:reload() end) end)
   end
 
   local winid
@@ -403,9 +233,9 @@ return function()
     winid = api.nvim_open_win(bufnr, true, {
       relative = "editor", style = "minimal", border = "single",
       width = width, height = height, row = row, col = col,
-      title = string.format("gitstatus://%s", vim.fs.basename(root)),
+      title = string.format("gitstatus://%s", fs.basename(git.root)),
     })
-    api.nvim_win_set_hl_ns(winid, facts.hl_ns)
+    api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
 
     local function close_win() api.nvim_win_close(winid, false) end
     --no auto-close on winleave
