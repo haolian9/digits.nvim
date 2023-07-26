@@ -1,7 +1,8 @@
-local facts = require("digits.facts")
 local jelly = require("infra.jellyfish")("digits.commit", "debug")
 local prefer = require("infra.prefer")
 local strlib = require("infra.strlib")
+
+local facts = require("digits.facts")
 
 local api = vim.api
 
@@ -35,7 +36,7 @@ return function(git, on_exit)
         winid = api.nvim_open_win(bufnr, true, {
           relative = "editor", style = "minimal", border = "single",
           width = vim.go.columns, height = height, row = 0, col = 0,
-          title = "gitcommit://"
+          title = "git://commit"
         })
     api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
   end

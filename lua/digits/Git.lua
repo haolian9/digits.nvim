@@ -1,9 +1,11 @@
-local facts = require("digits.facts")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.Git", "debug")
 local prefer = require("infra.prefer")
+local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
+
+local facts = require("digits.facts")
 
 local api = vim.api
 
@@ -38,38 +40,49 @@ do
     return cp.stdout
   end
 
-  ---@param args string[]
-  ---@param jobspec {on_exit: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
-  function Git:floatterm_run(args, jobspec)
-    local bufnr
-    do
-      bufnr = api.nvim_create_buf(false, true)
-      prefer.bo(bufnr, "bufhidden", "wipe")
-      local function startinsert() ex("startinsert") end
-      api.nvim_create_autocmd("termopen", { buffer = bufnr, once = true, callback = startinsert })
-      --todo: i dont know why, but termopen will not be always triggered
-      api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = startinsert })
+  do
+    ---for `git --no-pager status`, `git status`
+    ---@param args string[]
+    ---@return string?
+    local function find_cmd_in_args(args)
+      for _, a in ipairs(args) do
+        if not strlib.startswith(a, "-") then return a end
+      end
     end
 
-    local winid
-    do
-      local height = vim.go.lines - 3 -- top border + bottom border + cmdline
+    ---@param args string[]
+    ---@param jobspec {on_exit: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
+    function Git:floatterm_run(args, jobspec)
+      local bufnr
+      do
+        bufnr = api.nvim_create_buf(false, true)
+        prefer.bo(bufnr, "bufhidden", "wipe")
+        local function startinsert() ex("startinsert") end
+        api.nvim_create_autocmd("termopen", { buffer = bufnr, once = true, callback = startinsert })
+        --todo: i dont know why, but termopen will not be always triggered
+        api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = startinsert })
+      end
+
+      local winid
+      do
+        local height = vim.go.lines - 3 -- top border + bottom border + cmdline
         -- stylua: ignore
         winid = api.nvim_open_win(bufnr, true, {
           relative = "editor", style = "minimal", border = "single",
           width = vim.go.columns, height = height, row = 0, col = 0,
-          title = string.format("gitterm://")
+          title = string.format("term://git %s", find_cmd_in_args(args) or "")
         })
-      api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-    end
-
-    do
-      table.insert(args, 1, "git")
-      if jobspec.env == nil then jobspec.env = {} end
-      for k, v in pairs(mandatory_envs) do
-        jobspec.env[k] = v
+        api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
       end
-      vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
+
+      do
+        table.insert(args, 1, "git")
+        if jobspec.env == nil then jobspec.env = {} end
+        for k, v in pairs(mandatory_envs) do
+          jobspec.env[k] = v
+        end
+        vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
+      end
     end
   end
 end

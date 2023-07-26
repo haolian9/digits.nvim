@@ -19,16 +19,19 @@ provide some git workflows based on nvim
 
 ## todo
 * [x] fugitive `0Git` 
-* [ ] GV / git log
 * [x] git commit -v
+* [x] git diff HEAD -- file
+* [ ] git log
 * [ ] git blame file
+* [ ] fugitive `Gedit`
 * [ ] libgit2 instead of git bin
+* [x] ~~git commit --fixup~~ just run it in a float term
 
 ## non-goals:
 * a complete port of vim-fugitive
 * a complete port of GV
 
 ## usage
-* `:lua require'digits'.status()` # equals fugitive's `0Git`
+* `:lua require'digits'.status()` # equals to fugitive `0Git`
 * `:lua require'digits'.commit()`
     * the COMMIT_EDITMSG is a buffer with ft=gitcommit

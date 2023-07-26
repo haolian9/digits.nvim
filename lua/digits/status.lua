@@ -17,14 +17,17 @@
 --* interactive terminal
 --* lock shadowed window
 
-local commit = require("digits.commit")
-local facts = require("digits.facts")
+local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.status", "debug")
 local bufmap = require("infra.keymap.buffer")
 local popupgeo = require("infra.popupgeo")
 local prefer = require("infra.prefer")
+
+local commit = require("digits.commit")
+local facts = require("digits.facts")
+local tui = require("tui")
 
 local api = vim.api
 
@@ -35,7 +38,7 @@ do
       ["??"] = true,
       ["A "] = false,
       ["AM"] = true,
-      ["AD"] = true,
+      -- ["AD"] = true, --that's not a reasonable combo
       ["D "] = false,
       ["R "] = false,
       ["RM"] = true,
@@ -83,7 +86,7 @@ do
       ["??"] = false,
       ["A "] = true,
       ["AM"] = true,
-      ["AD"] = true,
+      -- ["AD"] = true, --that's not a reasonable combo
       ["D "] = true,
       ["M "] = true,
       ["MM"] = true,
@@ -166,8 +169,8 @@ do
     return contracts.parse_status_line(line)
   end
 
-  ---@param winid integer
-  function Prototype:stage(winid)
+  function Prototype:stage()
+    local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
     if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
@@ -178,7 +181,8 @@ do
     self:reload_status_to_buf()
   end
 
-  function Prototype:unstage(winid)
+  function Prototype:unstage()
+    local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
     if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
@@ -191,8 +195,8 @@ do
 
   Prototype.reload = Prototype.reload_status_to_buf
 
-  ---@param winid integer
-  function Prototype:interactive_stage(winid)
+  function Prototype:interactive_stage()
+    local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
     if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
     local function on_exit() self:reload_status_to_buf() end
@@ -201,6 +205,35 @@ do
     else
       self.git:floatterm_run({ "add", "--patch", assert(renamed_path) }, { on_exit = on_exit })
     end
+  end
+
+  function Prototype:restore()
+    local winid = api.nvim_get_current_win()
+    local ss, us, path = self:parse_current_entry(winid)
+    if ss == "?" and us == "?" then return jelly.debug("not a tracked file") end
+    if ss == "A" then return jelly.debug("not a tracked file") end
+    if ss ~= " " then return jelly.info("unstage the file first") end
+
+    tui.confirm({ prompt = "gitrest://confirm" }, function(confirmed)
+      if not confirmed then return end
+      self.git:silent_run({ "restore", "--source=HEAD", "--", path })
+      self:reload_status_to_buf()
+    end)
+  end
+
+  ---@param edit_cmd string @modifiers are not supported, eg. `leftabove split`
+  function Prototype:edit(edit_cmd)
+    local winid = api.nvim_get_current_win()
+
+    local target
+    do
+      local ss, us, path, renamed_path = self:parse_current_entry(winid)
+      if ss == "D" or us == "D" then return jelly.debug("file was deleted already") end
+      target = ss == "R" and renamed_path or path
+    end
+
+    api.nvim_win_close(winid, false)
+    ex(edit_cmd, target)
   end
 
   ---@param git digits.Git
@@ -214,16 +247,32 @@ return function(git)
   local bufnr = api.nvim_create_buf(false, true)
   prefer.bo(bufnr, "bufhidden", "wipe")
 
+  local rhs = RHS(git, bufnr)
   do --setup keymaps to the buffer
-    local rhs = RHS(git, bufnr)
-    rhs:reload()
     local bm = bufmap.wraps(bufnr)
-    bm.n("a", function() rhs:stage(api.nvim_get_current_win()) end)
-    bm.n("u", function() rhs:unstage(api.nvim_get_current_win()) end)
-    bm.n("r", function() rhs:reload() end)
-    bm.n("p", function() rhs:interactive_stage(api.nvim_get_current_win()) end)
-    -- stylua: ignore
-    bm.n("w", function() commit(git, function() rhs:reload() end) end)
+    do
+      bm.n("a", function() rhs:stage() end)
+      bm.n("u", function() rhs:unstage() end)
+      bm.n("r", function() rhs:reload() end)
+      bm.n("p", function() rhs:interactive_stage() end)
+      bm.n("w", function()
+        commit(git, function() rhs:reload() end)
+      end)
+      bm.n("x", function() rhs:restore() end)
+    end
+    do
+      bm.n("i", function() rhs:edit("edit") end)
+      bm.n("o", function() rhs:edit("split") end)
+      bm.n("v", function() rhs:edit("split") end)
+      bm.n("t", function() rhs:edit("tabedit") end)
+    end
+    do
+      --intended to have no auto-close on winleave
+      local function close_win() api.nvim_win_close(0, false) end
+      bm.n("q", close_win)
+      bm.n("<c-[>", close_win)
+    end
+    --intended to have no reloading on winenter
   end
 
   local winid
@@ -233,13 +282,10 @@ return function(git)
     winid = api.nvim_open_win(bufnr, true, {
       relative = "editor", style = "minimal", border = "single",
       width = width, height = height, row = row, col = col,
-      title = string.format("gitstatus://%s", fs.basename(git.root)),
+      title = string.format("git://status@%s", fs.basename(git.root)),
     })
     api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-
-    local function close_win() api.nvim_win_close(winid, false) end
-    --no auto-close on winleave
-    bufmap(bufnr, "n", "q", close_win)
-    bufmap(bufnr, "n", "<c-[>", close_win)
   end
+
+  rhs:reload()
 end
