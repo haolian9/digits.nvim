@@ -1,3 +1,6 @@
+local M = {}
+
+local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.commit", "debug")
 local prefer = require("infra.prefer")
 local strlib = require("infra.strlib")
@@ -6,10 +9,16 @@ local facts = require("digits.facts")
 
 local api = vim.api
 
+---@param bufnr integer
+---@return fun(): string?
+local function buflines(bufnr)
+  return fn.map(function(lnum) return api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1] end, fn.range(api.nvim_buf_line_count(bufnr)))
+end
+
 ---equals `git commit --verbose`
 ---@param git digits.Git
 ---@param on_exit? fun() @called when the commit command completed
-return function(git, on_exit)
+function M.verbose(git, on_exit)
   local infos = {}
   do
     for line in git:run({ "status" }) do
@@ -32,29 +41,30 @@ return function(git, on_exit)
   local winid
   do
     local height = vim.go.lines - 3 -- top border + bottom border + cmdline
-        -- stylua: ignore
-        winid = api.nvim_open_win(bufnr, true, {
-          relative = "editor", style = "minimal", border = "single",
-          width = vim.go.columns, height = height, row = 0, col = 0,
-          title = "git://commit"
-        })
+    -- stylua: ignore
+    winid = api.nvim_open_win(bufnr, true, {
+      relative = "editor", style = "minimal", border = "single",
+      width = vim.go.columns, height = height, row = 0, col = 0,
+      title = "git://commit"
+    })
     api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
   end
 
-  --todo: maybe bufunload or bufwipeout for :split
-  api.nvim_create_autocmd("winclosed", {
+  --NB: as one buffer can be attached to many windows, worsely :sp and :vs are inevitable
+  --    hence avoid winclosed
+  api.nvim_create_autocmd("bufwipeout", {
     buffer = bufnr,
     once = true,
     callback = function()
       local msgs = {}
-      for i = 0, api.nvim_buf_line_count(bufnr) - 1 do
-        local line = api.nvim_buf_get_lines(bufnr, i, i + 1, false)[1]
+      for line in buflines(bufnr) do
         if strlib.startswith(line, "#") then break end
         table.insert(msgs, line)
       end
       if #msgs == 0 or msgs[1] == "" then return jelly.info("Aborting commit due to empty commit message.") end
-      local msg = table.concat(msgs, "\n")
-      git:floatterm_run({ "commit", "-m", msg }, { on_exit = on_exit })
+      git:floatterm_run({ "commit", "-m", table.concat(msgs, "\n") }, { on_exit = on_exit })
     end,
   })
 end
+
+return M

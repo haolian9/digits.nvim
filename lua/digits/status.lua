@@ -1,25 +1,13 @@
---{staged,unstaged} statuses: 3-length
---* ? '? {path}'
---* A 'A {path}'
---* M 'M {path}'
---* D 'D {path}'
---* R 'R {path} -> {path}'
---
---operations on each entry
---* add -p {path}
---* reset -- {path}
---* restore from HEAD
---
---fluent ux
---* prefer floatwin over tab/window
---  * proper position: editor or cursor or window
---  * size: decided by content
---* interactive terminal
---* lock shadowed window
+--terms
+--* status 3-length '{ss}{us} '
+--  * ss: staged status
+--  * us: unstaged status
+--  * enum: '?AMDR '
 
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
+local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("digits.status", "debug")
 local bufmap = require("infra.keymap.buffer")
 local popupgeo = require("infra.popupgeo")
@@ -38,7 +26,7 @@ do
       ["??"] = true,
       ["A "] = false,
       ["AM"] = true,
-      -- ["AD"] = true, --that's not a reasonable combo
+      ["AD"] = true,
       ["D "] = false,
       ["R "] = false,
       ["RM"] = true,
@@ -86,7 +74,7 @@ do
       ["??"] = false,
       ["A "] = true,
       ["AM"] = true,
-      -- ["AD"] = true, --that's not a reasonable combo
+      ["AD"] = true,
       ["D "] = true,
       ["M "] = true,
       ["MM"] = true,
@@ -142,7 +130,8 @@ do
     local lines
     do
       local stdout = self.git:run({ "status", "--porcelain=v1", "--ignore-submodules=all" })
-      lines = fn.concrete(stdout)
+      --todo: sort entries based on ss and us for better
+      lines = fn.tolist(stdout)
     end
 
     do --reload
@@ -155,6 +144,7 @@ do
 
   ---@private
   ---@param winid integer
+  ---@return string?,string?,string?,string? @stage_status, unstage_status, path, renamed_path
   function Prototype:parse_current_entry(winid)
     local line
     do
@@ -163,6 +153,7 @@ do
       local lines = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)
       assert(#lines == 1)
       line = lines[1]
+      if #line < 1 then return jelly.debug("blank line lnum#%d", lnum) end
       assert(#line >= 4)
     end
 
@@ -172,6 +163,7 @@ do
   function Prototype:stage()
     local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
+    if ss == nil then return end
     if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
       self.git:silent_run({ "add", path })
@@ -184,6 +176,7 @@ do
   function Prototype:unstage()
     local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
+    if ss == nil then return end
     if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
       self.git:silent_run({ "reset", "--", path })
@@ -207,9 +200,15 @@ do
     end
   end
 
+  function Prototype:interactive_stage_all()
+    local function on_exit() self:reload_status_to_buf() end
+    self.git:floatterm_run({ "add", "--patch", "." }, { on_exit = on_exit })
+  end
+
   function Prototype:restore()
     local winid = api.nvim_get_current_win()
     local ss, us, path = self:parse_current_entry(winid)
+    if ss == nil then return end
     if ss == "?" and us == "?" then return jelly.debug("not a tracked file") end
     if ss == "A" then return jelly.debug("not a tracked file") end
     if ss ~= " " then return jelly.info("unstage the file first") end
@@ -228,6 +227,7 @@ do
     local target
     do
       local ss, us, path, renamed_path = self:parse_current_entry(winid)
+      if ss == nil then return end
       if ss == "D" or us == "D" then return jelly.debug("file was deleted already") end
       target = ss == "R" and renamed_path or path
     end
@@ -255,8 +255,9 @@ return function(git)
       bm.n("u", function() rhs:unstage() end)
       bm.n("r", function() rhs:reload() end)
       bm.n("p", function() rhs:interactive_stage() end)
+      bm.n("P", function() rhs:interactive_stage_all() end)
       bm.n("w", function()
-        commit(git, function() rhs:reload() end)
+        commit.verbose(git, function() rhs:reload() end)
       end)
       bm.n("x", function() rhs:restore() end)
     end
@@ -266,13 +267,9 @@ return function(git)
       bm.n("v", function() rhs:edit("split") end)
       bm.n("t", function() rhs:edit("tabedit") end)
     end
-    do
-      --intended to have no auto-close on winleave
-      local function close_win() api.nvim_win_close(0, false) end
-      bm.n("q", close_win)
-      bm.n("<c-[>", close_win)
-    end
+    --intended to have no auto-close on winleave
     --intended to have no reloading on winenter
+    handyclosekeys(bufnr)
   end
 
   local winid

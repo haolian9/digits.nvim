@@ -21,7 +21,8 @@ provide some git workflows based on nvim
 * [x] fugitive `0Git` 
 * [x] git commit -v
 * [x] git diff HEAD -- file
-* [ ] git log
+* [x] git log
+* [x] git blame line
 * [ ] git blame file
 * [ ] fugitive `Gedit`
 * [ ] libgit2 instead of git bin
