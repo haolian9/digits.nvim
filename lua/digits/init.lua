@@ -29,9 +29,14 @@ function M.diff(bufnr)
   require("digits.diff").file(create_git(), bufnr)
 end
 
-function M.blame()
+function M.blame_curline()
   local winid = api.nvim_get_current_win()
   require("digits.blame").line(create_git(), winid)
+end
+
+function M.blame()
+  local winid = api.nvim_get_current_win()
+  require("digits.blame").file(create_git(), winid)
 end
 
 function M.log() require("digits.log")(create_git(), 100) end

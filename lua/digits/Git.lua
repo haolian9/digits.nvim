@@ -96,6 +96,14 @@ do
       end
     end
   end
+
+  ---@param path string
+  ---@return boolean
+  function Git:is_tracked(path)
+    assert(path ~= nil and path ~= "")
+    local cp = subprocess.run("git", { args = { "ls-files", "--error-unmatch", "--", path }, cwd = self.root, env = mandatory_envs }, false)
+    return cp.exit_code == 0
+  end
 end
 
 ---@param root string
