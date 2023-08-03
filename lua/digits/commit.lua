@@ -1,5 +1,6 @@
 local M = {}
 
+local ctx = require("infra.ctx")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.commit", "debug")
 local prefer = require("infra.prefer")
@@ -32,10 +33,13 @@ function M.verbose(git, on_exit)
   local bufnr
   do
     bufnr = api.nvim_create_buf(false, true)
-    prefer.bo(bufnr, "bufhidden", "wipe")
-    api.nvim_buf_set_lines(bufnr, 0, 0, false, { "" })
-    api.nvim_buf_set_lines(bufnr, 1, -1, false, infos)
-    prefer.bo(bufnr, "filetype", "gitcommit")
+    local bo = prefer.buf(bufnr)
+    bo.bufhidden = "wipe"
+    bo.filetype = "gitcommit"
+    ctx.no_undo(bo, function()
+      api.nvim_buf_set_lines(bufnr, 0, 0, false, { "" })
+      api.nvim_buf_set_lines(bufnr, 1, -1, false, infos)
+    end)
   end
 
   local winid

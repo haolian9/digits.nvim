@@ -29,10 +29,12 @@ return function(git, obj, path)
   local bufnr
   do
     bufnr = api.nvim_create_buf(false, true)
-    prefer.bo(bufnr, "bufhidden", "wipe")
+    local bo = prefer.buf(bufnr)
+    bo.bufhidden = "wipe"
+    bo.filetype = "git"
     handyclosekeys(bufnr)
     api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-    prefer.bo(bufnr, "filetype", "git")
+    bo.modifiable = false
   end
 
   -- stylua: ignore
