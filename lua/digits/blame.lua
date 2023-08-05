@@ -1,6 +1,7 @@
 local M = {}
 
 local bufpath = require("infra.bufpath")
+local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
@@ -171,12 +172,11 @@ do
 
     local blame_bufnr, blame_len
     do
-      blame_bufnr = api.nvim_create_buf(false, true)
-      prefer.bo(blame_bufnr, "bufhidden", "wipe")
-      handyclosekeys(blame_bufnr)
       local line = string.format("%s %s %s", blame.obj, blame.author, blame.date)
       blame_len = #line
-      api.nvim_buf_set_lines(blame_bufnr, 0, -1, false, { line })
+      blame_bufnr = Ephemeral(nil, {line})
+
+      handyclosekeys(blame_bufnr)
       bufmap(blame_bufnr, "n", "gf", function() require("digits.show")(git, blame.obj, blame.path) end)
     end
 

@@ -1,6 +1,6 @@
+local Ephemeral = require("infra.Ephemeral")
 local fn = require("infra.fn")
 local handyclosekeys = require("infra.handyclosekeys")
-local jelly = require("infra.jellyfish")("digits.show")
 local listlib = require("infra.listlib")
 local prefer = require("infra.prefer")
 
@@ -28,13 +28,10 @@ return function(git, obj, path)
 
   local bufnr
   do
-    bufnr = api.nvim_create_buf(false, true)
-    local bo = prefer.buf(bufnr)
-    bo.bufhidden = "wipe"
-    bo.filetype = "git"
+    bufnr = Ephemeral(nil, lines)
+    prefer.bo(bufnr, "filetype", "git")
+
     handyclosekeys(bufnr)
-    api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-    bo.modifiable = false
   end
 
   -- stylua: ignore

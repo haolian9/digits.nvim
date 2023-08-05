@@ -1,3 +1,4 @@
+local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.Git")
@@ -61,11 +62,7 @@ do
     function Git:floatterm_run(args, jobspec, enter_insertmode)
       if enter_insertmode == nil then enter_insertmode = true end
 
-      local bufnr
-      do
-        bufnr = api.nvim_create_buf(false, true)
-        prefer.bo(bufnr, "bufhidden", "wipe")
-      end
+      local bufnr = Ephemeral()
 
       if enter_insertmode then
         api.nvim_create_autocmd("termopen", { buffer = bufnr, once = true, callback = startinsert })

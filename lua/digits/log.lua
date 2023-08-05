@@ -1,3 +1,4 @@
+local Ephemeral = require("infra.Ephemeral")
 local fn = require("infra.fn")
 local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("digits.log")
@@ -23,14 +24,11 @@ return function(git, n)
 
   local bufnr
   do
-    bufnr = api.nvim_create_buf(false, true)
-    local bo = prefer.buf(bufnr)
-    bo.bufhidden = "wipe"
-    bo.filetype = "git"
-    handyclosekeys(bufnr)
+    bufnr = Ephemeral(nil, lines)
+    prefer.bo(bufnr, "filetype", "git")
 
-    local bm = bufmap.wraps(bufnr)
-    bm.n("gf", function()
+    handyclosekeys(bufnr)
+    bufmap(bufnr, "n", "gf", function()
       local lnum = api.nvim_win_get_cursor(0)[1] - 1
       local line = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1]
       local hash = string.match(line, "^commit (%x+)$")
@@ -40,8 +38,6 @@ return function(git, n)
   end
 
   do
-    api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-
     -- stylua: ignore
     api.nvim_open_win(bufnr, true, {
       relative = 'editor', style = 'minimal', border = 'single',

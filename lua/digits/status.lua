@@ -5,6 +5,7 @@
 --  * enum: '?AMDR '
 
 local ex = require("infra.ex")
+local Ephemeral = require"infra.Ephemeral"
 local fn = require("infra.fn")
 local fs = require("infra.fs")
 local handyclosekeys = require("infra.handyclosekeys")
@@ -244,8 +245,7 @@ end
 
 ---@param git digits.Git
 return function(git)
-  local bufnr = api.nvim_create_buf(false, true)
-  prefer.bo(bufnr, "bufhidden", "wipe")
+  local bufnr = Ephemeral()
 
   local rhs = RHS(git, bufnr)
   do --setup keymaps to the buffer
