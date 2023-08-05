@@ -7,7 +7,8 @@ provide some git workflows based on nvim
     * tabpage/floatwin, terminal, luajit ffi
 
 ## status
-* far from complete
+* it just works (tm)
+* it covered almost all my workflows on git
 
 ## requirements
 * linux
@@ -22,9 +23,12 @@ provide some git workflows based on nvim
 * [x] git commit -v
 * [x] git diff HEAD -- file
 * [x] git log
-* [x] git blame line
-* [ ] git blame file
+* [x] git blame {line}
+* [x] git blame {file}
+* [x] git diff {file}
+* [x] git log {file}
 * [ ] fugitive `Gedit`
+*     * [x] git show {object}
 * [ ] libgit2 instead of git bin
 * [x] ~~git commit --fixup~~ just run it in a float term
 
