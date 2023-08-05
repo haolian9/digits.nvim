@@ -27,8 +27,9 @@ provide some git workflows based on nvim
 * [x] git blame {file}
 * [x] git diff {file}
 * [x] git log {file}
+* [x] git {cmd} ...
 * [ ] fugitive `Gedit`
-*     * [x] git show {object}
+      * [x] git show {object}
 * [ ] libgit2 instead of git bin
 * [x] ~~git commit --fixup~~ just run it in a float term
 
