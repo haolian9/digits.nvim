@@ -4,8 +4,8 @@
 --  * us: unstaged status
 --  * enum: '?AMDR '
 
+local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
-local Ephemeral = require"infra.Ephemeral"
 local fn = require("infra.fn")
 local fs = require("infra.fs")
 local handyclosekeys = require("infra.handyclosekeys")
@@ -164,7 +164,7 @@ do
   function Prototype:stage()
     local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
-    if ss == nil then return end
+    if not (ss and us) then return end
     if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
       self.git:silent_run({ "add", path })
@@ -177,7 +177,7 @@ do
   function Prototype:unstage()
     local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
-    if ss == nil then return end
+    if not (ss and us) then return end
     if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
       self.git:silent_run({ "reset", "--", path })
@@ -195,15 +195,15 @@ do
     if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
     local function on_exit() self:reload_status_to_buf() end
     if ss ~= "R" then
-      self.git:floatterm_run({ "add", "--patch", path }, { on_exit = on_exit })
+      self.git:floatterm({ "add", "--patch", path }, { on_exit = on_exit })
     else
-      self.git:floatterm_run({ "add", "--patch", assert(renamed_path) }, { on_exit = on_exit })
+      self.git:floatterm({ "add", "--patch", assert(renamed_path) }, { on_exit = on_exit })
     end
   end
 
   function Prototype:interactive_stage_all()
     local function on_exit() self:reload_status_to_buf() end
-    self.git:floatterm_run({ "add", "--patch", "." }, { on_exit = on_exit })
+    self.git:floatterm({ "add", "--patch", "." }, { on_exit = on_exit })
   end
 
   function Prototype:restore()

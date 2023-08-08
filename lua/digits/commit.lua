@@ -1,6 +1,5 @@
 local M = {}
 
-local ctx = require("infra.ctx")
 local Ephemeral = require("infra.Ephemeral")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.commit", "debug")
@@ -61,7 +60,7 @@ function M.verbose(git, on_exit)
         table.insert(msgs, line)
       end
       if #msgs == 0 or msgs[1] == "" then return jelly.info("Aborting commit due to empty commit message.") end
-      git:floatterm_run({ "commit", "-m", table.concat(msgs, "\n") }, { on_exit = on_exit })
+      git:floatterm({ "commit", "-m", table.concat(msgs, "\n") }, { on_exit = on_exit })
     end,
   })
 end
