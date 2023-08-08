@@ -26,6 +26,7 @@ provide some git workflows based on nvim
 * [x] git blame {line}
 * [x] git blame {file}
 * [x] git diff {file}
+* [x] git diff hunks -> loclist
 * [x] git log {file}
 * [x] git {cmd} ...
 * [ ] fugitive `Gedit`
