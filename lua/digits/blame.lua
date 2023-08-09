@@ -138,18 +138,29 @@ do
       loclist:feed_vim()
     end
 
+    local loc_winid
     do
       qltoggle.open_loclist()
-      local loc_winid = api.nvim_get_current_win()
+      loc_winid = api.nvim_get_current_win()
       assert(loc_winid ~= winid)
       local lnum = api.nvim_win_get_cursor(winid)[1] - 1
       vim.fn.setloclist(winid, {}, "a", { idx = lnum })
       ex("wincmd", "H")
       api.nvim_win_set_width(loc_winid, 50)
+    end
+
+    do -- setup scrollbind
+      assert(not prefer.wo(winid, "scrollbind"))
       prefer.wo(loc_winid, "scrollbind", true)
-      --todo: unset when?
       prefer.wo(winid, "scrollbind", true)
-      --todo: close the loclist on bufwinleave
+      api.nvim_create_autocmd("winclosed", {
+        callback = function(args)
+          local this_winid = assert(tonumber(args.match))
+          if this_winid ~= loc_winid then return end
+          prefer.wo(winid, "scrollbind", false)
+          return true
+        end,
+      })
     end
   end
 end
