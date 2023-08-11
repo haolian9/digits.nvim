@@ -20,7 +20,7 @@ end
 
 function M.status() require("digits.status")(create_git()) end
 
-function M.commit() require("digits.commit").verbose(create_git()) end
+function M.commit() require("digits.commit").tab(create_git()) end
 
 function M.diff() require("digits.diff")(create_git()) end
 

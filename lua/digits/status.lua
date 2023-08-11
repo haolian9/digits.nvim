@@ -4,6 +4,7 @@
 --  * us: unstaged status
 --  * enum: '?AMDR '
 
+local bufrename = require("infra.bufrename")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
@@ -174,17 +175,37 @@ do
     self:reload_status_to_buf()
   end
 
-  function Prototype:unstage()
-    local winid = api.nvim_get_current_win()
-    local ss, us, path, renamed_path = self:parse_current_entry(winid)
-    if not (ss and us) then return end
-    if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
-    if ss ~= "R" then
-      self.git:silent_run({ "reset", "--", path })
-    else
-      self.git:silent_run({ "reset", "--", path, assert(renamed_path) })
+  do
+    function Prototype:unstage()
+      local winid = api.nvim_get_current_win()
+      local ss, us, path, renamed_path = self:parse_current_entry(winid)
+      if not (ss and us) then return end
+      if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
+      if ss ~= "R" then
+        self.git:silent_run({ "reset", "--", path })
+      else
+        self.git:silent_run({ "reset", "--", path, assert(renamed_path) })
+      end
+      self:reload_status_to_buf()
     end
-    self:reload_status_to_buf()
+
+    function Prototype:interactive_unstage()
+      local winid = api.nvim_get_current_win()
+      local ss, us, path, renamed_path = self:parse_current_entry(winid)
+      if not (ss and us) then return end
+      if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
+      local function on_exit() self:reload_status_to_buf() end
+      if ss ~= "R" then
+        self.git:floatterm({ "reset", "--patch", "--", path }, { on_exit = on_exit }, true)
+      else
+        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) }, { on_exit = on_exit }, true)
+      end
+    end
+
+    function Prototype:interactive_unstage_all()
+      local function on_exit() self:reload_status_to_buf() end
+      self.git:floatterm({ "reset", "--patch" }, { on_exit = on_exit }, true)
+    end
   end
 
   Prototype.reload = Prototype.reload_status_to_buf
@@ -247,6 +268,8 @@ end
 return function(git)
   local bufnr = Ephemeral()
 
+  bufrename(bufnr, string.format("git://status/%s/%d", fs.basename(git.root), bufnr))
+
   local rhs = RHS(git, bufnr)
   do --setup keymaps to the buffer
     local bm = bufmap.wraps(bufnr)
@@ -256,10 +279,11 @@ return function(git)
       bm.n("r", function() rhs:reload() end)
       bm.n("p", function() rhs:interactive_stage() end)
       bm.n("P", function() rhs:interactive_stage_all() end)
-      bm.n("w", function()
-        commit.verbose(git, function() rhs:reload() end)
-      end)
+      -- stylua: ignore
+      bm.n("w", function() commit.tab(git, function() rhs:reload() end) end)
       bm.n("x", function() rhs:restore() end)
+      bm.n("d", function() rhs:interactive_unstage() end)
+      bm.n("D", function() rhs:interactive_unstage_all() end)
     end
     do
       bm.n("i", function() rhs:edit("edit") end)
@@ -279,7 +303,6 @@ return function(git)
     winid = api.nvim_open_win(bufnr, true, {
       relative = "editor", style = "minimal", border = "single",
       width = width, height = height, row = row, col = col,
-      title = string.format("git://status@%s", fs.basename(git.root)),
     })
     api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
   end

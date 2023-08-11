@@ -1,3 +1,4 @@
+local bufrename = require("infra.bufrename")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
@@ -51,6 +52,7 @@ do
       for _, a in ipairs(args) do
         if not strlib.startswith(a, "-") then return a end
       end
+      error("unreachable")
     end
 
     local function startinsert() ex("startinsert") end
@@ -76,7 +78,6 @@ do
         winid = api.nvim_open_win(bufnr, true, {
           relative = "editor", style = "minimal", border = "single",
           width = vim.go.columns, height = height, row = 0, col = 0,
-          title = string.format("git://%s", find_subcmd_in_args(args) or "")
         })
         api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
       end
@@ -89,6 +90,8 @@ do
         end
         vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
       end
+
+      bufrename(bufnr, string.format("git://%s/%d", find_subcmd_in_args(args), bufnr))
     end
   end
 
