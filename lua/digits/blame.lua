@@ -2,14 +2,12 @@ local M = {}
 
 local bufpath = require("infra.bufpath")
 local Ephemeral = require("infra.Ephemeral")
-local ex = require("infra.ex")
 local fs = require("infra.fs")
 local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("digits.blame", "debug")
 local bufmap = require("infra.keymap.buffer")
-local prefer = require("infra.prefer")
+local strlib = require("infra.strlib")
 
-local qltoggle = require("qltoggle")
 local sting = require("sting")
 
 local api = vim.api
@@ -19,19 +17,24 @@ local api = vim.api
 local function parse_blame(line)
   --samples:
   --* ^d545cdb (haoliang 2018-06-21 1)
-  --* 7d03e957 (haoliang 2021-07-01 2) setup checklist
-  --* 0a39d4af (haoliang 2023-07-28 155)     blame_winid = api.nvim_open_win(blame_bufnr, false, { relative = "cursor", row = -1, col = 0, width = blame_len + 2, height = 1 })
+  --* 7d03e957 (haoliang 2021-07-01 2) foo bar
+  --* 0a39d4af (haoliang          2023-07-28 155)     foo bar
+  --* 00000000 (Not Committed Yet 2023-08-15 149)       foo bar
   local obj, author, date, lnum
   if string.sub(line, 10, 10) == "(" then
     obj, author, date, lnum = string.match(line, "%^?(%x+) %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%)")
   else
     obj, author, date, lnum = string.match(line, "%^?(%x+) .+ %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%)")
   end
+
   if not (obj and author and date and lnum) then
     jelly.err('unable to parse blame line: "%s"', line)
     error("unreachable")
   end
+
+  author = strlib.rstrip(author, " ")
   lnum = assert(tonumber(lnum))
+
   return obj, author, date, lnum
 end
 
@@ -98,19 +101,18 @@ do
       blame_bufnr = Ephemeral(nil, { line })
 
       handyclosekeys(blame_bufnr)
-      bufmap(blame_bufnr, "n", "gf", function() require("digits.show")(git, blame.obj, blame.path) end)
+      bufmap(blame_bufnr, "n", "gf", function() require("digits.show")(git, string.format("%s:%s", blame.obj, blame.path)) end)
     end
 
-    do
-      local blame_winid = api.nvim_open_win(blame_bufnr, false, { relative = "cursor", row = -1, col = 0, width = blame_len + 2, height = 1 })
-      api.nvim_create_autocmd("cursormoved", {
-        buffer = bufnr,
-        once = true,
-        callback = function()
-          if api.nvim_win_is_valid(blame_winid) then api.nvim_win_close(blame_winid, false) end
-        end,
-      })
-    end
+    local blame_winid = api.nvim_open_win(blame_bufnr, false, { relative = "cursor", row = -1, col = 0, width = blame_len + 2, height = 1 })
+
+    api.nvim_create_autocmd("cursormoved", {
+      buffer = bufnr,
+      once = true,
+      callback = function()
+        if api.nvim_win_is_valid(blame_winid) then api.nvim_win_close(blame_winid, false) end
+      end,
+    })
   end
 end
 
@@ -136,32 +138,12 @@ do
         loclist:append(blame_to_pickle(bufnr, line))
       end
       loclist:feed_vim()
+
+      local loc_idx = api.nvim_win_get_cursor(winid)[1]
+      vim.fn.setloclist(winid, {}, "a", { idx = loc_idx })
     end
 
-    local loc_winid
-    do
-      qltoggle.open_loclist()
-      loc_winid = api.nvim_get_current_win()
-      assert(loc_winid ~= winid)
-      local lnum = api.nvim_win_get_cursor(winid)[1] - 1
-      vim.fn.setloclist(winid, {}, "a", { idx = lnum })
-      ex("wincmd", "H")
-      api.nvim_win_set_width(loc_winid, 50)
-    end
-
-    do -- setup scrollbind
-      assert(not prefer.wo(winid, "scrollbind"))
-      prefer.wo(loc_winid, "scrollbind", true)
-      prefer.wo(winid, "scrollbind", true)
-      api.nvim_create_autocmd("winclosed", {
-        callback = function(args)
-          local this_winid = assert(tonumber(args.match))
-          if this_winid ~= loc_winid then return end
-          prefer.wo(winid, "scrollbind", false)
-          return true
-        end,
-      })
-    end
+    --it's really hard to maintain a usable side-by-side aligned via scrollbind'ed of locwin&blamed-buffer
   end
 end
 

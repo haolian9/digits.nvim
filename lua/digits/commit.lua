@@ -73,15 +73,11 @@ end
 function M.floatwin(git, on_exit)
   local bufnr = compose_the_buffer(git, on_exit)
 
-  local winid
   do
     local height = vim.go.lines - 3 -- top border + bottom border + cmdline
-    -- stylua: ignore
-    winid = api.nvim_open_win(bufnr, true, {
-      relative = "editor", style = "minimal", border = "single",
-      width = vim.go.columns, height = height, row = 0, col = 0,
-    })
+    local winid = api.nvim_open_win(bufnr, true, { relative = "editor", style = "minimal", border = "single", width = vim.go.columns, height = height, row = 0, col = 0 })
     api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
+    prefer.wo(winid, "list", false)
   end
 end
 
@@ -91,6 +87,7 @@ end
 function M.tab(git, on_exit)
   local _, bufname = compose_the_buffer(git, on_exit)
   ex("tabedit", bufname)
+  prefer.wo(api.nvim_get_current_win(), "list", false)
 end
 
 return M
