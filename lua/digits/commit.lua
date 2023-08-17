@@ -42,7 +42,7 @@ local function compose_the_buffer(git, on_exit)
 
   local bufnr, bufname
   do
-    bufnr = Ephemeral({ undolevels = 10 }, { "", infos })
+    bufnr = Ephemeral({ undolevels = 10, modifiable = true }, { "", infos })
     prefer.bo(bufnr, "filetype", "gitcommit")
     bufname = string.format("git://commit/%d", next_id())
     bufrename(bufnr, bufname)
