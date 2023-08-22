@@ -3,7 +3,6 @@ local M = {}
 local bufpath = require("infra.bufpath")
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
-local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("digits.blame", "debug")
 local bufmap = require("infra.keymap.buffer")
 local strlib = require("infra.strlib")
@@ -98,19 +97,23 @@ do
     do
       local line = string.format("%s %s %s", blame.obj, blame.author, blame.date)
       blame_len = #line
-      blame_bufnr = Ephemeral(nil, { line })
+      blame_bufnr = Ephemeral({handyclose = true}, { line })
 
-      handyclosekeys(blame_bufnr)
       bufmap(blame_bufnr, "n", "gf", function() require("digits.show")(git, string.format("%s:%s", blame.obj, blame.path)) end)
     end
 
-    local blame_winid = api.nvim_open_win(blame_bufnr, false, { relative = "cursor", row = -1, col = 0, width = blame_len + 2, height = 1 })
+    local blame_winid
+    do
+      local winopts = { relative = "cursor", row = -1, col = 0, width = blame_len + 2, height = 1 }
+      blame_winid = api.nvim_open_win(blame_bufnr, false, winopts)
+    end
 
     api.nvim_create_autocmd("cursormoved", {
       buffer = bufnr,
       once = true,
       callback = function()
-        if api.nvim_win_is_valid(blame_winid) then api.nvim_win_close(blame_winid, false) end
+        if api.nvim_win_is_valid(blame_winid) then return end
+        api.nvim_win_close(blame_winid, false)
       end,
     })
   end

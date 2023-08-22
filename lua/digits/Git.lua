@@ -1,10 +1,10 @@
 local bufrename = require("infra.bufrename")
+local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
-local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("digits.Git")
-local prefer = require("infra.prefer")
+local popupgeo = require("infra.popupgeo")
 local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
 
@@ -73,12 +73,8 @@ do
 
       local winid
       do
-        local height = vim.go.lines - 3 -- top border + bottom border + cmdline
-        -- stylua: ignore
-        winid = api.nvim_open_win(bufnr, true, {
-          relative = "editor", style = "minimal", border = "single",
-          width = vim.go.columns, height = height, row = 0, col = 0,
-        })
+        local winopts = dictlib.merged({ relative = "editor", border = "single" }, popupgeo.fullscreen(1))
+        winid = api.nvim_open_win(bufnr, true, winopts)
         api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
       end
 

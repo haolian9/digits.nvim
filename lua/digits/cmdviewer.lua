@@ -1,11 +1,9 @@
 local M = {}
 
-local bufrename = require("infra.bufrename")
-local bufrename = require("infra.bufrename")
+local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
-local ex = require("infra.ex")
 local fn = require("infra.fn")
-local handyclosekeys = require("infra.handyclosekeys")
+local popupgeo = require("infra.popupgeo")
 local prefer = require("infra.prefer")
 local strlib = require("infra.strlib")
 
@@ -23,68 +21,35 @@ local function find_subcmd_in_args(args)
   error("unreachable")
 end
 
----@param git digits.Git
----@param args string[]
----@return integer @bufnr
-function M.fullscreen_floatwin(git, args)
-  local lines
-  do
-    local output = git:run(args)
-    lines = fn.tolist(output)
-    assert(#lines > 0)
-  end
+do
+  ---@param git digits.Git
+  ---@param args string[]
+  ---@return integer @bufnr
+  function M.fullscreen_floatwin(git, args)
+    local lines
+    do
+      local output = git:run(args)
+      lines = fn.tolist(output)
+      assert(#lines > 0)
+    end
 
-  local bufnr
-  do
-    bufnr = Ephemeral(nil, lines)
-    prefer.bo(bufnr, "filetype", "git")
-    handyclosekeys(bufnr)
-    bufrename(bufnr, string.format("git://%s/%d", find_subcmd_in_args(args), bufnr))
-  end
+    local bufnr
+    do
+      local function namefn(nr) return string.format("git://%s/%d", find_subcmd_in_args(args), nr) end
+      bufnr = Ephemeral({ namefn = namefn, handyclose = true }, lines)
+      prefer.bo(bufnr, "filetype", "git")
+    end
 
-  do
-    local height = vim.go.lines - 2 - vim.go.cmdheight
-    local width = vim.go.columns - 2
-    -- stylua: ignore
-    local winid = api.nvim_open_win(bufnr, true, {
-      relative = "editor", style = "minimal", border = "single",
-      width = width, height = height, col = 0, row = 0,
-    })
-    api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-  end
+    do
+      local win_opts = dictlib.merged({ relative = "editor", border = "single" }, popupgeo.fullscreen(1))
+      local winid = api.nvim_open_win(bufnr, true, win_opts)
+      api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
+    end
 
-  return bufnr
+    return bufnr
+  end
 end
 
-function M.split(git, args, split_cmd)
-  local lines
-  do
-    local output = git:run(args)
-    lines = fn.tolist(output)
-    assert(#lines > 0)
-  end
-
-  local bufnr
-  do
-    bufnr = Ephemeral(nil, lines)
-    prefer.bo(bufnr, "filetype", "git")
-    handyclosekeys(bufnr)
-    bufrename(bufnr, string.format("git://%s/%d", find_subcmd_in_args(args), bufnr))
-  end
-
-  do
-    ex(split_cmd)
-    local height = vim.go.lines - 2 - vim.go.cmdheight
-    local width = vim.go.columns - 2
-    -- stylua: ignore
-    local winid = api.nvim_open_win(bufnr, true, {
-      relative = "editor", style = "minimal", border = "single",
-      width = width, height = height, col = 0, row = 0,
-    })
-    api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-  end
-
-  return bufnr
-end
+function M.split(git, args, split_cmd) error("not implemented") end
 
 return M

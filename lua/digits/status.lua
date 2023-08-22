@@ -4,12 +4,11 @@
 --  * us: unstaged status
 --  * enum: '?AMDR '
 
-local bufrename = require("infra.bufrename")
+local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
-local handyclosekeys = require("infra.handyclosekeys")
 local jelly = require("infra.jellyfish")("digits.status", "debug")
 local bufmap = require("infra.keymap.buffer")
 local popupgeo = require("infra.popupgeo")
@@ -266,9 +265,11 @@ end
 
 ---@param git digits.Git
 return function(git)
-  local bufnr = Ephemeral()
-
-  bufrename(bufnr, string.format("git://status/%s/%d", fs.basename(git.root), bufnr))
+  local bufnr
+  do
+    local function namefn(nr) return string.format("git://status/%s/%d", fs.basename(git.root), nr) end
+    bufnr = Ephemeral({ namefn = namefn, handyclose = true })
+  end
 
   local rhs = RHS(git, bufnr)
   do --setup keymaps to the buffer
@@ -293,17 +294,12 @@ return function(git)
     end
     --intended to have no auto-close on winleave
     --intended to have no reloading on winenter
-    handyclosekeys(bufnr)
   end
 
   local winid
   do
-    local width, height, row, col = popupgeo.editor_central(0.6, 0.8)
-    -- stylua: ignore
-    winid = api.nvim_open_win(bufnr, true, {
-      relative = "editor", style = "minimal", border = "single",
-      width = width, height = height, row = row, col = col,
-    })
+    local winopts = dictlib.merged({ relative = "editor", border = "single" }, popupgeo.editor(0.6, 0.8, "mid", "mid", 1))
+    winid = api.nvim_open_win(bufnr, true, winopts)
     api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
   end
 
