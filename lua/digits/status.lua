@@ -126,8 +126,7 @@ do
 
   Prototype.__index = Prototype
 
-  ---@private
-  function Prototype:reload_status_to_buf()
+  function Prototype:reload()
     local lines
     do
       local stdout = self.git:run({ "status", "--porcelain=v1", "--ignore-submodules=all" })
@@ -171,7 +170,7 @@ do
     else
       self.git:silent_run({ "add", assert(renamed_path) })
     end
-    self:reload_status_to_buf()
+    self:reload()
   end
 
   do
@@ -185,7 +184,7 @@ do
       else
         self.git:silent_run({ "reset", "--", path, assert(renamed_path) })
       end
-      self:reload_status_to_buf()
+      self:reload()
     end
 
     function Prototype:interactive_unstage()
@@ -193,38 +192,28 @@ do
       local ss, us, path, renamed_path = self:parse_current_entry(winid)
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
-      local function on_exit() self:reload_status_to_buf() end
       if ss ~= "R" then
-        self.git:floatterm({ "reset", "--patch", "--", path }, { on_exit = on_exit }, true)
+        self.git:floatterm({ "reset", "--patch", "--", path }, nil, true)
       else
-        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) }, { on_exit = on_exit }, true)
+        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) }, nil, true)
       end
     end
 
-    function Prototype:interactive_unstage_all()
-      local function on_exit() self:reload_status_to_buf() end
-      self.git:floatterm({ "reset", "--patch" }, { on_exit = on_exit }, true)
-    end
+    function Prototype:interactive_unstage_all() self.git:floatterm({ "reset", "--patch" }, {}, true) end
   end
-
-  Prototype.reload = Prototype.reload_status_to_buf
 
   function Prototype:interactive_stage()
     local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
     if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
-    local function on_exit() self:reload_status_to_buf() end
     if ss ~= "R" then
-      self.git:floatterm({ "add", "--patch", path }, { on_exit = on_exit })
+      self.git:floatterm({ "add", "--patch", path })
     else
-      self.git:floatterm({ "add", "--patch", assert(renamed_path) }, { on_exit = on_exit })
+      self.git:floatterm({ "add", "--patch", assert(renamed_path) })
     end
   end
 
-  function Prototype:interactive_stage_all()
-    local function on_exit() self:reload_status_to_buf() end
-    self.git:floatterm({ "add", "--patch", "." }, { on_exit = on_exit })
-  end
+  function Prototype:interactive_stage_all() self.git:floatterm({ "add", "--patch", "." }) end
 
   function Prototype:restore()
     local winid = api.nvim_get_current_win()
@@ -237,7 +226,6 @@ do
     tui.confirm({ prompt = "gitrest://confirm" }, function(confirmed)
       if not confirmed then return end
       self.git:silent_run({ "restore", "--source=HEAD", "--", path })
-      self:reload_status_to_buf()
     end)
   end
 
@@ -281,7 +269,7 @@ return function(git)
       bm.n("p", function() rhs:interactive_stage() end)
       bm.n("P", function() rhs:interactive_stage_all() end)
       -- stylua: ignore
-      bm.n("w", function() commit.tab(git, function() rhs:reload() end) end)
+      bm.n("w", function() commit.tab(git) end)
       bm.n("x", function() rhs:restore() end)
       bm.n("d", function() rhs:interactive_unstage() end)
       bm.n("D", function() rhs:interactive_unstage_all() end)
@@ -302,6 +290,18 @@ return function(git)
     winid = api.nvim_open_win(bufnr, true, winopts)
     api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
   end
+
+  --reload
+  api.nvim_create_autocmd("winenter", {
+    callback = function()
+      if not api.nvim_win_is_valid(winid) then return true end -- unregister this autocmd
+      do -- necessary checks for https://github.com/neovim/neovim/issues/24843
+        if api.nvim_get_current_win() ~= winid then return end
+        if api.nvim_win_get_buf(winid) ~= bufnr then return end
+      end
+      rhs:reload()
+    end,
+  })
 
   rhs:reload()
 end

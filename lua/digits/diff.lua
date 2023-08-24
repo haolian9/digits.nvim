@@ -22,5 +22,5 @@ return function(git, bufnr, cached)
     table.insert(args, path)
   end
 
-  cmdviewer.fullscreen_floatwin(git, args)
+  cmdviewer.tab(git, args)
 end

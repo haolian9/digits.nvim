@@ -58,9 +58,10 @@ do
     local function startinsert() ex("startinsert") end
 
     ---@param args string[]
-    ---@param jobspec {on_exit?: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
+    ---@param jobspec? {on_exit?: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
     ---@param enter_insertmode? boolean @nil=true
     function Git:floatterm(args, jobspec, enter_insertmode)
+      if jobspec == nil then jobspec = {} end
       if enter_insertmode == nil then enter_insertmode = true end
 
       local bufnr = Ephemeral()
