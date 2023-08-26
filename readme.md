@@ -14,9 +14,8 @@ provide some git workflows based on nvim
 * linux
 * git 2.41.0
 * nvim 0.9.1
-* ~~libgit2: 1.6.4~~
-* ~~zig 0.10.1~~
 * haolian9/infra.nvim
+* haolian9/tui.nvim
 
 ## todo
 * [x] fugitive `0Git` 
@@ -31,7 +30,7 @@ provide some git workflows based on nvim
 * [x] git {cmd} ...
 * [ ] fugitive `Gedit`
       * [x] git show {object}
-* [ ] libgit2 instead of git bin
+* [x] ~~libgit2 instead of git bin~~ i quite satisfied with git bin
 * [x] ~~git commit --fixup~~ just run it in a float term
 
 ## non-goals:
