@@ -1,16 +1,13 @@
 local M = {}
 
 local bufrename = require("infra.bufrename")
-local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
+local rifts = require("infra.rifts")
 local fn = require("infra.fn")
 local handyclosekeys = require("infra.handyclosekeys")
-local popupgeo = require("infra.popupgeo")
 local prefer = require("infra.prefer")
 local strlib = require("infra.strlib")
-
-local facts = require("digits.facts")
 
 local api = vim.api
 
@@ -37,11 +34,7 @@ function M.fullscreen_floatwin(git, args)
     prefer.bo(bufnr, "filetype", "git")
   end
 
-  do
-    local win_opts = dictlib.merged({ relative = "editor", border = "single" }, popupgeo.fullscreen(1))
-    local winid = api.nvim_open_win(bufnr, true, win_opts)
-    api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-  end
+  rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
 
   return bufnr
 end

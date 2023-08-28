@@ -4,11 +4,9 @@ local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.Git")
-local popupgeo = require("infra.popupgeo")
+local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
-
-local facts = require("digits.facts")
 
 local api = vim.api
 
@@ -57,27 +55,41 @@ do
 
     local function startinsert() ex("startinsert") end
 
+    local function autoclose_on_success()
+      if vim.v.event.status == 0 then api.nvim_win_close(0, false) end
+    end
+
+    ---@alias TermSpec {insert?: boolean, autoclose?: boolean}
+
+    local resolve_termspec
+    do
+      local default = { insert = true, autoclose = true }
+      ---@param user_specified? table
+      ---@return TermSpec
+      function resolve_termspec(user_specified)
+        if user_specified == nil then return default end
+        return dictlib.merged(user_specified, default)
+      end
+    end
+
     ---@param args string[]
     ---@param jobspec? {on_exit?: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
-    ---@param enter_insertmode? boolean @nil=true
-    function Git:floatterm(args, jobspec, enter_insertmode)
+    ---@param termspec? TermSpec
+    function Git:floatterm(args, jobspec, termspec)
       if jobspec == nil then jobspec = {} end
-      if enter_insertmode == nil then enter_insertmode = true end
+      termspec = resolve_termspec(termspec)
 
       local bufnr = Ephemeral()
 
-      if enter_insertmode then
+      if termspec.insert then
         api.nvim_create_autocmd("termopen", { buffer = bufnr, once = true, callback = startinsert })
         --i dont know why, but termopen will not be always triggered
         api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = startinsert })
       end
 
-      local winid
-      do
-        local winopts = dictlib.merged({ relative = "editor", border = "single" }, popupgeo.fullscreen(1))
-        winid = api.nvim_open_win(bufnr, true, winopts)
-        api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-      end
+      if termspec.autoclose then api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = autoclose_on_success }) end
+
+      rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
 
       do
         table.insert(args, 1, "git")

@@ -48,7 +48,7 @@ function M.cmd(...)
   assert(#args > 0)
 
   local git = create_git()
-  git:floatterm(args, {}, false)
+  git:floatterm(args, {}, { insert = false, autoclose = false })
 end
 
 ---@param winid? integer

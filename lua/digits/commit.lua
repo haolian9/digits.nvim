@@ -1,15 +1,12 @@
 local M = {}
 
-local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.commit", "debug")
-local popupgeo = require("infra.popupgeo")
 local prefer = require("infra.prefer")
+local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
-
-local facts = require("digits.facts")
 
 local api = vim.api
 
@@ -62,13 +59,8 @@ end
 ---@param on_exit? fun() @called when the commit command completed
 function M.floatwin(git, on_exit)
   local bufnr = compose_the_buffer(git, on_exit)
-
-  do
-    local winopts = dictlib.merged({ relative = "editor", border = "single" }, popupgeo.fullscreen(1))
-    local winid = api.nvim_open_win(bufnr, true, winopts)
-    api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-    prefer.wo(winid, "list", false)
-  end
+  local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
+  prefer.wo(winid, "list", false)
 end
 
 ---equals `git commit --verbose`

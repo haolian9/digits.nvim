@@ -4,18 +4,16 @@
 --  * us: unstaged status
 --  * enum: '?AMDR '
 
-local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.status", "debug")
 local bufmap = require("infra.keymap.buffer")
-local popupgeo = require("infra.popupgeo")
 local prefer = require("infra.prefer")
+local rifts = require("infra.rifts")
 
 local commit = require("digits.commit")
-local facts = require("digits.facts")
 local tui = require("tui")
 
 local api = vim.api
@@ -193,13 +191,13 @@ do
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
       if ss ~= "R" then
-        self.git:floatterm({ "reset", "--patch", "--", path }, nil, true)
+        self.git:floatterm({ "reset", "--patch", "--", path })
       else
-        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) }, nil, true)
+        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) })
       end
     end
 
-    function Prototype:interactive_unstage_all() self.git:floatterm({ "reset", "--patch" }, {}, true) end
+    function Prototype:interactive_unstage_all() self.git:floatterm({ "reset", "--patch" }, {}) end
   end
 
   function Prototype:interactive_stage()
@@ -284,12 +282,7 @@ return function(git)
     --intended to have no reloading on winenter
   end
 
-  local winid
-  do
-    local winopts = dictlib.merged({ relative = "editor", border = "single" }, popupgeo.editor(0.6, 0.8, "mid", "mid", 1))
-    winid = api.nvim_open_win(bufnr, true, winopts)
-    api.nvim_win_set_hl_ns(winid, facts.floatwin_ns)
-  end
+  local winid = rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
 
   --reload
   api.nvim_create_autocmd("winenter", {
