@@ -1,6 +1,7 @@
 local M = {}
 
 local bufpath = require("infra.bufpath")
+local Augroup = require"infra.Augroup"
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.blame", "debug")
@@ -108,11 +109,10 @@ do
       blame_winid = api.nvim_open_win(blame_bufnr, false, winopts)
     end
 
-    api.nvim_create_autocmd("cursormoved", {
-      buffer = bufnr,
-      once = true,
+    local aug = Augroup.buf(bufnr, true)
+    aug:once("cursormoved", {
       callback = function()
-        if api.nvim_win_is_valid(blame_winid) then return end
+        if not api.nvim_win_is_valid(blame_winid) then return end
         api.nvim_win_close(blame_winid, false)
       end,
     })

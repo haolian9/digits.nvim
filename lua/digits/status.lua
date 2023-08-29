@@ -5,6 +5,7 @@
 --  * enum: '?AMDR '
 
 local Ephemeral = require("infra.Ephemeral")
+local Augroup = require"infra.Augroup"
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
@@ -285,7 +286,8 @@ return function(git)
   local winid = rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
 
   --reload
-  api.nvim_create_autocmd("winenter", {
+  local aug = Augroup.buf(bufnr, true)
+  aug:repeats("winenter", {
     callback = function()
       if not api.nvim_win_is_valid(winid) then return true end -- unregister this autocmd
       do -- necessary checks for https://github.com/neovim/neovim/issues/24843

@@ -1,5 +1,6 @@
 local M = {}
 
+local Augroup = require("infra.Augroup")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
@@ -47,6 +48,7 @@ local function compose_the_buffer(git, on_exit)
         table.insert(msgs, line)
       end
       if #msgs == 0 or msgs[1] == "" then return jelly.info("Aborting commit due to empty commit message.") end
+
       git:floatterm({ "commit", "-m", table.concat(msgs, "\n") }, { on_exit = on_exit })
     end,
   })

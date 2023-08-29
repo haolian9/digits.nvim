@@ -1,3 +1,4 @@
+local Augroup = require("infra.Augroup")
 local bufrename = require("infra.bufrename")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
@@ -80,14 +81,24 @@ do
       termspec = resolve_termspec(termspec)
 
       local bufnr = Ephemeral()
+      local aug = Augroup.buf(bufnr, true)
 
       if termspec.insert then
-        api.nvim_create_autocmd("termopen", { buffer = bufnr, once = true, callback = startinsert })
+        aug:once("termopen", { callback = startinsert })
         --i dont know why, but termopen will not be always triggered
-        api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = startinsert })
+        aug:once("termclose", { callback = startinsert })
       end
 
-      if termspec.autoclose then api.nvim_create_autocmd("termclose", { buffer = bufnr, once = true, callback = autoclose_on_success }) end
+      if termspec.autoclose then
+        aug:once("termclose", {
+          nested = true,
+          callback = function()
+            if vim.v.event.status ~= 0 then return end
+            if termspec.insert then ex("stopinsert") end
+            api.nvim_win_close(0, false)
+          end,
+        })
+      end
 
       rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
 
