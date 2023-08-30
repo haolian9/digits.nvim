@@ -4,8 +4,8 @@
 --  * us: unstaged status
 --  * enum: '?AMDR '
 
+local Augroup = require("infra.Augroup")
 local Ephemeral = require("infra.Ephemeral")
-local Augroup = require"infra.Augroup"
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
@@ -279,17 +279,14 @@ return function(git)
       bm.n("v", function() rhs:edit("split") end)
       bm.n("t", function() rhs:edit("tabedit") end)
     end
-    --intended to have no auto-close on winleave
-    --intended to have no reloading on winenter
   end
 
   local winid = rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
 
   --reload
-  local aug = Augroup.buf(bufnr, true)
+  local aug = Augroup.win(winid, true)
   aug:repeats("winenter", {
     callback = function()
-      if not api.nvim_win_is_valid(winid) then return true end -- unregister this autocmd
       do -- necessary checks for https://github.com/neovim/neovim/issues/24843
         if api.nvim_get_current_win() ~= winid then return end
         if api.nvim_win_get_buf(winid) ~= bufnr then return end
