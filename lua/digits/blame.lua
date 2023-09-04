@@ -1,7 +1,7 @@
 local M = {}
 
+local Augroup = require("infra.Augroup")
 local bufpath = require("infra.bufpath")
-local Augroup = require"infra.Augroup"
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.blame", "debug")
@@ -98,7 +98,7 @@ do
     do
       local line = string.format("%s %s %s", blame.obj, blame.author, blame.date)
       blame_len = #line
-      blame_bufnr = Ephemeral({handyclose = true}, { line })
+      blame_bufnr = Ephemeral({ handyclose = true }, { line })
 
       bufmap(blame_bufnr, "n", "gf", function() require("digits.show")(git, string.format("%s:%s", blame.obj, blame.path)) end)
     end

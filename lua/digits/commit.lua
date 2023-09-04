@@ -1,6 +1,5 @@
 local M = {}
 
-local Augroup = require("infra.Augroup")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
