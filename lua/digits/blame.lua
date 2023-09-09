@@ -4,7 +4,7 @@ local Augroup = require("infra.Augroup")
 local bufpath = require("infra.bufpath")
 local Ephemeral = require("infra.Ephemeral")
 local fs = require("infra.fs")
-local jelly = require("infra.jellyfish")("digits.blame", "debug")
+local jelly = require("infra.jellyfish")("digits.blame", "info")
 local bufmap = require("infra.keymap.buffer")
 local strlib = require("infra.strlib")
 

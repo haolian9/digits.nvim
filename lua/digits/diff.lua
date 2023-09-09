@@ -1,6 +1,6 @@
 local bufpath = require("infra.bufpath")
 local fs = require("infra.fs")
-local jelly = require("infra.jellyfish")("digits.diff", "debug")
+local jelly = require("infra.jellyfish")("digits.diff", "info")
 
 local cmdviewer = require("digits.cmdviewer")
 
