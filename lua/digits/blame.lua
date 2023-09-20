@@ -140,9 +140,6 @@ do
     local path = resolve_path(git, bufnr)
     if path == nil then return end
 
-    -- .feed_vim will move the cursor in this window
-    local loc_idx = api.nvim_win_get_cursor(winid)[1]
-
     do
       local loclist = sting.location.shelf(winid, string.format("git://blame#%s", path))
       ---@diagnostic disable-next-line: invisible
@@ -152,10 +149,11 @@ do
       for line in output do
         loclist:append(blame_to_pickle(bufnr, line))
       end
-      loclist:feed_vim()
-    end
+      loclist:feed_vim(true, false)
 
-    ex("ll " .. loc_idx)
+      local loc_idx = api.nvim_win_get_cursor(winid)[1]
+      ex("ll " .. loc_idx)
+    end
 
     --it's really hard to maintain a usable side-by-side aligned via scrollbind'ed of locwin&blamed-buffer
   end

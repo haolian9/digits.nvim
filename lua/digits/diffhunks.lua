@@ -44,7 +44,7 @@ function M.setloclist(git, winid)
         shelf:append({ bufnr = bufnr, lnum = start_a, col = 0, text = text })
       end,
     })
-    shelf:feed_vim()
+    shelf:feed_vim(true, false)
   end
 end
 
