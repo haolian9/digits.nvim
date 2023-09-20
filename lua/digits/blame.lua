@@ -3,6 +3,7 @@ local M = {}
 local Augroup = require("infra.Augroup")
 local bufpath = require("infra.bufpath")
 local Ephemeral = require("infra.Ephemeral")
+local ex = require("infra.ex")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.blame", "info")
 local bufmap = require("infra.keymap.buffer")
@@ -13,7 +14,7 @@ local sting = require("sting")
 local api = vim.api
 
 ---@param line string
----@return string,string,string,integer
+---@return string,string,string,integer,string
 local function parse_blame(line)
   --samples:
   --* ^d545cdb (haoliang 2018-06-21 1)
@@ -22,12 +23,12 @@ local function parse_blame(line)
   --* 00000000 (Not Committed Yet 2023-08-15 149)       foo bar
   local obj, author, date, lnum
   if string.sub(line, 10, 10) == "(" then
-    obj, author, date, lnum = string.match(line, "%^?(%x+) %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%)")
+    obj, author, date, lnum, line = string.match(line, "^%^?(%x+) %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%) ?(.+)$")
   else
-    obj, author, date, lnum = string.match(line, "%^?(%x+) .+ %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%)")
+    obj, author, date, lnum, line = string.match(line, "^%^?(%x+) .+ %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%) ?(.+)$")
   end
 
-  if not (obj and author and date and lnum) then
+  if not (obj and author and date and lnum and line) then
     jelly.err('unable to parse blame line: "%s"', line)
     error("unreachable")
   end
@@ -35,7 +36,7 @@ local function parse_blame(line)
   author = strlib.rstrip(author, " ")
   lnum = assert(tonumber(lnum))
 
-  return obj, author, date, lnum
+  return obj, author, date, lnum, line
 end
 
 ---@param git digits.Git
@@ -124,27 +125,37 @@ do
   ---@param line string
   ---@return sting.Pickle
   local function blame_to_pickle(bufnr, line)
-    local obj, author, date, lnum = parse_blame(line)
-    return { bufnr = bufnr, lnum = lnum, text = string.format("%s %s %s", obj, date, author) }
+    local blame = { parse_blame(line) }
+    return { bufnr = bufnr, lnum = blame[4], blame = blame }
   end
+
+  local function pickle_flavor(pickle)
+    local obj, author, date, lnum, line = unpack(pickle.blame)
+    return string.format("%s %s %s|%d|%s", author, date, obj, lnum, line)
+  end
+
   function M.file(git, winid)
     local bufnr = api.nvim_win_get_buf(winid)
 
     local path = resolve_path(git, bufnr)
     if path == nil then return end
 
+    -- .feed_vim will move the cursor in this window
+    local loc_idx = api.nvim_win_get_cursor(winid)[1]
+
     do
       local loclist = sting.location.shelf(winid, string.format("git://blame#%s", path))
+      ---@diagnostic disable-next-line: invisible
+      loclist.flavor = pickle_flavor
       loclist:reset()
       local output = git:run({ "--no-pager", "blame", "--date=short", "--abbrev=7", "--", path })
       for line in output do
         loclist:append(blame_to_pickle(bufnr, line))
       end
       loclist:feed_vim()
-
-      local loc_idx = api.nvim_win_get_cursor(winid)[1]
-      vim.fn.setloclist(winid, {}, "a", { idx = loc_idx })
     end
+
+    ex("ll " .. loc_idx)
 
     --it's really hard to maintain a usable side-by-side aligned via scrollbind'ed of locwin&blamed-buffer
   end
