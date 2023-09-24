@@ -5,6 +5,7 @@
 --  * enum: '?AMDR '
 
 local Augroup = require("infra.Augroup")
+local ctx = require("infra.ctx")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
@@ -15,7 +16,7 @@ local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 
 local commit = require("digits.commit")
-local tui = require("tui")
+local puff = require("puff")
 
 local api = vim.api
 
@@ -121,11 +122,13 @@ do
   ---@class digits.status.RHS
   ---@field private git digits.Git
   ---@field private bufnr integer
+  ---@field private no_reload boolean @some operations may take time, which will not be ready on winenter
   local Prototype = {}
 
   Prototype.__index = Prototype
 
-  function Prototype:reload()
+  ---@private
+  function Prototype:_reload()
     local lines
     do
       local stdout = self.git:run({ "status", "--porcelain=v1", "--ignore-submodules=all" })
@@ -133,12 +136,12 @@ do
       lines = fn.tolist(stdout)
     end
 
-    do --reload
-      local bo = prefer.buf(self.bufnr)
-      bo.modifiable = true
-      api.nvim_buf_set_lines(self.bufnr, 0, -1, false, lines)
-      bo.modifiable = false
-    end
+    ctx.modifiable(self.bufnr, function() api.nvim_buf_set_lines(self.bufnr, 0, -1, false, lines) end)
+  end
+
+  function Prototype:reload()
+    if self.no_reload then return end
+    self:_reload()
   end
 
   ---@private
@@ -222,9 +225,13 @@ do
     if ss == "A" then return jelly.debug("not a tracked file") end
     if ss ~= " " then return jelly.info("unstage the file first") end
 
-    tui.confirm({ prompt = "gitrest://confirm" }, function(confirmed)
-      if not confirmed then return end
-      self.git:silent_run({ "restore", "--source=HEAD", "--", path })
+    self.no_reload = true
+    puff.confirm({ prompt = "gitrest://confirm" }, function(confirmed)
+      if confirmed then
+        self.git:silent_run({ "restore", "--source=HEAD", "--", path })
+        self:_reload()
+      end
+      self.no_reload = false
     end)
   end
 
@@ -267,7 +274,6 @@ return function(git)
       bm.n("r", function() rhs:reload() end)
       bm.n("p", function() rhs:interactive_stage() end)
       bm.n("P", function() rhs:interactive_stage_all() end)
-      -- stylua: ignore
       bm.n("w", function() commit.tab(git) end)
       bm.n("x", function() rhs:restore() end)
       bm.n("d", function() rhs:interactive_unstage() end)

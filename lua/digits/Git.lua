@@ -5,6 +5,7 @@ local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.Git")
+local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
@@ -56,10 +57,6 @@ do
 
     local function startinsert() ex("startinsert") end
 
-    local function autoclose_on_success()
-      if vim.v.event.status == 0 then api.nvim_win_close(0, false) end
-    end
-
     ---@alias TermSpec {insert?: boolean, autoclose?: boolean}
 
     local resolve_termspec
@@ -100,7 +97,8 @@ do
         })
       end
 
-      rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
+      local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
+      prefer.wo(winid, "list", true)
 
       do
         table.insert(args, 1, "git")
