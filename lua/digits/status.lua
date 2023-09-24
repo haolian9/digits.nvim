@@ -195,13 +195,13 @@ do
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
       if ss ~= "R" then
-        self.git:floatterm({ "reset", "--patch", "--", path })
+        self.git:floatterm({ "reset", "--patch", "--", path }, nil, { cbreak = true })
       else
-        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) })
+        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) }, nil, { cbreak = true })
       end
     end
 
-    function Prototype:interactive_unstage_all() self.git:floatterm({ "reset", "--patch" }, {}) end
+    function Prototype:interactive_unstage_all() self.git:floatterm({ "reset", "--patch" }, nil, { cbreak = true }) end
   end
 
   function Prototype:interactive_stage()
@@ -209,13 +209,13 @@ do
     local ss, us, path, renamed_path = self:parse_current_entry(winid)
     if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
-      self.git:floatterm({ "add", "--patch", path })
+      self.git:floatterm({ "add", "--patch", path }, nil, { cbreak = true })
     else
-      self.git:floatterm({ "add", "--patch", assert(renamed_path) })
+      self.git:floatterm({ "add", "--patch", assert(renamed_path) }, nil, { cbreak = true })
     end
   end
 
-  function Prototype:interactive_stage_all() self.git:floatterm({ "add", "--patch", "." }) end
+  function Prototype:interactive_stage_all() self.git:floatterm({ "add", "--patch", "." }, nil, { cbreak = true }) end
 
   function Prototype:restore()
     local winid = api.nvim_get_current_win()

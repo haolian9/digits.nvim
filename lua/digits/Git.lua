@@ -5,6 +5,7 @@ local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.Git")
+local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
@@ -57,22 +58,41 @@ do
 
     local function startinsert() ex("startinsert") end
 
-    ---@alias TermSpec {insert?: boolean, autoclose?: boolean}
+    ---@class digits.GitTermSpec
+    ---@field insert?    boolean
+    ---@field autoclose? boolean
+    ---@field cbreak?    boolean
 
     local resolve_termspec
     do
       local default = { insert = true, autoclose = true }
       ---@param user_specified? table
-      ---@return TermSpec
+      ---@return digits.GitTermSpec
       function resolve_termspec(user_specified)
         if user_specified == nil then return default end
         return dictlib.merged(user_specified, default)
       end
     end
 
+    local enter_cbreak_mode
+    do
+      local keys = {}
+      for code = string.byte("a"), string.byte("z") do
+        local char = string.char(code)
+        keys[char] = char .. "<cr>"
+      end
+
+      function enter_cbreak_mode(bufnr)
+        local bm = bufmap.wraps(bufnr)
+        for lhs, rhs in pairs(keys) do
+          bm.t(lhs, rhs)
+        end
+      end
+    end
+
     ---@param args string[]
     ---@param jobspec? {on_exit?: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
-    ---@param termspec? TermSpec
+    ---@param termspec? digits.GitTermSpec
     function Git:floatterm(args, jobspec, termspec)
       if jobspec == nil then jobspec = {} end
       termspec = resolve_termspec(termspec)
@@ -108,6 +128,8 @@ do
         end
         vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
       end
+
+      if termspec.cbreak then enter_cbreak_mode(bufnr) end
 
       bufrename(bufnr, string.format("git://%s/%d", find_subcmd_in_args(args), bufnr))
     end
