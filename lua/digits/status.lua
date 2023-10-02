@@ -226,7 +226,7 @@ do
     if ss ~= " " then return jelly.info("unstage the file first") end
 
     self.no_reload = true
-    puff.confirm({ prompt = "gitrest://confirm" }, function(confirmed)
+    puff.confirm({ prompt = "git.restore" }, function(confirmed)
       if confirmed then
         self.git:silent_run({ "restore", "--source=HEAD", "--", path })
         self:_reload()
@@ -234,6 +234,24 @@ do
       self.no_reload = false
     end)
   end
+
+  function Prototype:clean()
+    local winid = api.nvim_get_current_win()
+    local ss, us, path = self:parse_current_entry(winid)
+    if ss == nil then return end
+    if not (ss == "?" and us == "?") then return jelly.debug("not a untracked file") end
+
+    self.no_reload = true
+    puff.confirm({ prompt = "git.clean" }, function(confirmed)
+      if confirmed then
+        self.git:silent_run({ "clean", "--force", "--", path })
+        self:_reload()
+      end
+      self.no_reload = false
+    end)
+  end
+
+  function Prototype:interactive_clean_all() self.git:floatterm({ "clean", "--interactive", "-d" }, nil, { cbreak = true }) end
 
   ---@param edit_cmd string @modifiers are not supported, eg. `leftabove split`
   function Prototype:edit(edit_cmd)
@@ -275,9 +293,11 @@ return function(git)
       bm.n("p", function() rhs:interactive_stage() end)
       bm.n("P", function() rhs:interactive_stage_all() end)
       bm.n("w", function() commit.tab(git) end)
-      bm.n("x", function() rhs:restore() end)
+      bm.n("c", function() rhs:restore() end)
       bm.n("d", function() rhs:interactive_unstage() end)
       bm.n("D", function() rhs:interactive_unstage_all() end)
+      bm.n("x", function() rhs:clean() end)
+      bm.n("X", function() rhs:interactive_clean_all() end)
     end
     do
       bm.n("i", function() rhs:edit("edit") end)
