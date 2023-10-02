@@ -12,7 +12,6 @@ local fn = require("infra.fn")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.status", "info")
 local bufmap = require("infra.keymap.buffer")
-local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 
 local commit = require("digits.commit")
@@ -119,6 +118,24 @@ end
 
 local RHS
 do
+  ---@private
+  ---@param winid integer
+  ---@return string?,string?,string?,string? @stage_status, unstage_status, path, renamed_path
+  local function parse_current_entry(winid)
+    local line
+    do
+      local lnum = assert(api.nvim_win_get_cursor(winid))[1] - 1
+      local bufnr = api.nvim_win_get_buf(winid)
+      local lines = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)
+      assert(#lines == 1)
+      line = lines[1]
+      if #line < 1 then return jelly.debug("blank line lnum#%d", lnum) end
+      assert(#line >= 4)
+    end
+
+    return contracts.parse_status_line(line)
+  end
+
   ---@class digits.status.RHS
   ---@field private git digits.Git
   ---@field private bufnr integer
@@ -144,27 +161,9 @@ do
     self:_reload()
   end
 
-  ---@private
-  ---@param winid integer
-  ---@return string?,string?,string?,string? @stage_status, unstage_status, path, renamed_path
-  function Prototype:parse_current_entry(winid)
-    local line
-    do
-      local lnum = assert(api.nvim_win_get_cursor(winid))[1] - 1
-      local bufnr = api.nvim_win_get_buf(winid)
-      local lines = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)
-      assert(#lines == 1)
-      line = lines[1]
-      if #line < 1 then return jelly.debug("blank line lnum#%d", lnum) end
-      assert(#line >= 4)
-    end
-
-    return contracts.parse_status_line(line)
-  end
-
   function Prototype:stage()
     local winid = api.nvim_get_current_win()
-    local ss, us, path, renamed_path = self:parse_current_entry(winid)
+    local ss, us, path, renamed_path = parse_current_entry(winid)
     if not (ss and us) then return end
     if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
@@ -178,7 +177,7 @@ do
   do
     function Prototype:unstage()
       local winid = api.nvim_get_current_win()
-      local ss, us, path, renamed_path = self:parse_current_entry(winid)
+      local ss, us, path, renamed_path = parse_current_entry(winid)
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
       if ss ~= "R" then
@@ -191,7 +190,7 @@ do
 
     function Prototype:interactive_unstage()
       local winid = api.nvim_get_current_win()
-      local ss, us, path, renamed_path = self:parse_current_entry(winid)
+      local ss, us, path, renamed_path = parse_current_entry(winid)
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
       if ss ~= "R" then
@@ -206,7 +205,7 @@ do
 
   function Prototype:interactive_stage()
     local winid = api.nvim_get_current_win()
-    local ss, us, path, renamed_path = self:parse_current_entry(winid)
+    local ss, us, path, renamed_path = parse_current_entry(winid)
     if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
       self.git:floatterm({ "add", "--patch", path }, nil, { cbreak = true })
@@ -219,7 +218,7 @@ do
 
   function Prototype:restore()
     local winid = api.nvim_get_current_win()
-    local ss, us, path = self:parse_current_entry(winid)
+    local ss, us, path = parse_current_entry(winid)
     if ss == nil then return end
     if ss == "?" and us == "?" then return jelly.debug("not a tracked file") end
     if ss == "A" then return jelly.debug("not a tracked file") end
@@ -237,7 +236,7 @@ do
 
   function Prototype:clean()
     local winid = api.nvim_get_current_win()
-    local ss, us, path = self:parse_current_entry(winid)
+    local ss, us, path = parse_current_entry(winid)
     if ss == nil then return end
     if not (ss == "?" and us == "?") then return jelly.debug("not a untracked file") end
 
@@ -259,7 +258,7 @@ do
 
     local target
     do
-      local ss, us, path, renamed_path = self:parse_current_entry(winid)
+      local ss, us, path, renamed_path = parse_current_entry(winid)
       if ss == nil then return end
       if ss == "D" or us == "D" then return jelly.debug("file was deleted already") end
       target = ss == "R" and renamed_path or path
