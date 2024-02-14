@@ -111,7 +111,7 @@ do
     end
 
     local aug = Augroup.buf(bufnr, true)
-    aug:once("cursormoved", {
+    aug:once("CursorMoved", {
       callback = function()
         if not api.nvim_win_is_valid(blame_winid) then return end
         api.nvim_win_close(blame_winid, false)

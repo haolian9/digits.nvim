@@ -101,13 +101,13 @@ do
       local aug = Augroup.buf(bufnr, true)
 
       if termspec.insert then
-        aug:once("termopen", { callback = startinsert })
+        aug:once("TermOpen", { callback = startinsert })
         --i dont know why, but termopen will not be always triggered
-        aug:once("termclose", { callback = startinsert })
+        aug:once("TermClose", { callback = startinsert })
       end
 
       if termspec.autoclose then
-        aug:once("termclose", {
+        aug:once("TermClose", {
           nested = true,
           callback = function()
             if vim.v.event.status ~= 0 then return end

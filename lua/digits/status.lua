@@ -310,7 +310,7 @@ return function(git)
 
   --reload
   local aug = Augroup.win(winid, true)
-  aug:repeats("winenter", {
+  aug:repeats("WinEnter", {
     callback = function()
       do -- necessary checks for https://github.com/neovim/neovim/issues/24843
         if api.nvim_get_current_win() ~= winid then return end
