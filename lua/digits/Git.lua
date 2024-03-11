@@ -1,5 +1,4 @@
 local Augroup = require("infra.Augroup")
-local bufrename = require("infra.bufrename")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
@@ -8,7 +7,6 @@ local jelly = require("infra.jellyfish")("digits.Git")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
-local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
 
 local api = vim.api
@@ -46,22 +44,12 @@ do
   end
 
   do
-    ---for `git --no-pager status`, `git status`
-    ---@param args string[]
-    ---@return string?
-    local function find_subcmd_in_args(args)
-      for _, a in ipairs(args) do
-        if not strlib.startswith(a, "-") then return a end
-      end
-      error("unreachable")
-    end
-
     local function startinsert() ex("startinsert") end
 
     ---@class digits.GitTermSpec
-    ---@field insert?    boolean
-    ---@field autoclose? boolean
-    ---@field cbreak?    boolean
+    ---@field insert?    boolean @nil=true, enter the insert/terminal mode
+    ---@field autoclose? boolean @nil=true, only when exit code is 0
+    ---@field cbreak?    boolean @nil=false, the cbreak mode
 
     local resolve_termspec
     do
@@ -70,7 +58,7 @@ do
       ---@return digits.GitTermSpec
       function resolve_termspec(user_specified)
         if user_specified == nil then return default end
-        return dictlib.merged(user_specified, default)
+        return dictlib.merged(default, user_specified)
       end
     end
 
@@ -94,6 +82,7 @@ do
     ---@param jobspec? {on_exit?: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
     ---@param termspec? digits.GitTermSpec
     function Git:floatterm(args, jobspec, termspec)
+      table.insert(args, 1, "git")
       if jobspec == nil then jobspec = {} end
       termspec = resolve_termspec(termspec)
 
@@ -117,21 +106,26 @@ do
         })
       end
 
-      local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
-      prefer.wo(winid, "list", true)
+      local winid
+      do
+        winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" })
+        local wo = prefer.win(winid)
+        wo.list = true
+        wo.winbar = table.concat(args, " ")
+      end
 
       do
-        table.insert(args, 1, "git")
         if jobspec.env == nil then jobspec.env = {} end
         for k, v in pairs(mandatory_envs) do
           if jobspec.env[k] == nil then jobspec.env[k] = v end
         end
+
         vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
       end
 
       if termspec.cbreak then enter_cbreak_mode(bufnr) end
 
-      bufrename(bufnr, string.format("git://%s/%d", find_subcmd_in_args(args), bufnr))
+      --no need to rename the ephemeral termbuf since the floatwin is fullscreen
     end
   end
 

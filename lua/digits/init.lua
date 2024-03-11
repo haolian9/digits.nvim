@@ -67,6 +67,11 @@ function M.show(object)
   require("digits.show")(git, object)
 end
 
+function M.push()
+  local git = create_git()
+  require("digits.push")(git)
+end
+
 M.comp = {
   available_subcmds = function() return { "status", "commit", "diff", "diff_file", "blame_curline", "blame", "log", "hunks" } end,
 }

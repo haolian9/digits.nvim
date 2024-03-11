@@ -32,8 +32,14 @@ function M.fullscreen_floatwin(git, args)
     prefer.bo(bufnr, "filetype", "git")
   end
 
-  local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
-  prefer.wo(winid, "list", false)
+  local winid
+  do
+    winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
+    local wo = prefer.win(winid)
+    wo.list = false
+    table.insert(args, 1, "git")
+    wo.winbar = table.concat(args, " ")
+  end
 
   return bufnr
 end
