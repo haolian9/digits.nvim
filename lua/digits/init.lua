@@ -6,6 +6,8 @@
 
 local M = {}
 
+local dictlib = require("infra.dictlib")
+local fn = require("infra.fn")
 local project = require("infra.project")
 
 local Git = require("digits.Git")
@@ -73,7 +75,9 @@ function M.push()
 end
 
 M.comp = {
-  available_subcmds = function() return { "status", "commit", "diff", "diff_file", "blame_curline", "blame", "log", "hunks" } end,
+  available_subcmds = function()
+    return fn.tolist(fn.filter(function(e) return e ~= "comp" and e ~= "cmd" end, dictlib.keys(M)))
+  end,
 }
 
 return M
