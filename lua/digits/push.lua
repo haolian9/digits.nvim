@@ -1,8 +1,5 @@
 local jelly = require("infra.jellyfish")("digits.push", "info")
-local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
-
-local cmdviewer = require("digits.cmdviewer")
 
 ---@param git digits.Git
 local function resolve_push_remote(git)
