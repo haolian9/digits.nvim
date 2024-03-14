@@ -37,8 +37,7 @@ function M.fullscreen_floatwin(git, args)
     winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
     local wo = prefer.win(winid)
     wo.list = false
-    table.insert(args, 1, "git")
-    wo.winbar = table.concat(args, " ")
+    wo.winbar = fn.join(fn.chained({ "git" }, args), " ")
   end
 
   return bufnr

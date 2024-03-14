@@ -110,7 +110,7 @@ do
       do
         winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" })
         local wo = prefer.win(winid)
-        wo.list = true
+        wo.list = false
         wo.winbar = table.concat(args, " ")
       end
 
