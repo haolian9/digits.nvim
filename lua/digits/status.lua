@@ -2,7 +2,8 @@
 --* status 3-length '{ss}{us} '
 --  * ss: staged status
 --  * us: unstaged status
---  * enum: '?AMDR '
+--  * enum: '?AMDRU '
+--    * UU: unstaged && unmerged, when rebase
 
 local Augroup = require("infra.Augroup")
 local ctx = require("infra.ctx")
@@ -36,6 +37,7 @@ do
       ["MD"] = true,
       [" M"] = true,
       [" D"] = true,
+      ["UU"] = true,
     }
     ---@param ss string @stage status
     ---@param us string @unstage status
@@ -60,6 +62,7 @@ do
       ["MD"] = false,
       [" M"] = true,
       [" D"] = false,
+      ["UU"] = false, --error: needs merge
     }
 
     function contracts.is_interactive_stagable(ss, us)
@@ -84,6 +87,7 @@ do
       ["RD"] = true,
       [" M"] = false,
       [" D"] = false,
+      ["UU"] = false,
     }
     ---@param ss string @stage status
     ---@param us string @unstage status
@@ -166,12 +170,23 @@ do
     local ss, us, path, renamed_path = parse_current_entry(winid)
     if not (ss and us) then return end
     if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
-    if ss ~= "R" then
-      self.git:silent_run({ "add", path })
-    else
-      self.git:silent_run({ "add", assert(renamed_path) })
+
+    local function stage()
+      if ss ~= "R" then
+        self.git:silent_run({ "add", path })
+      else
+        self.git:silent_run({ "add", assert(renamed_path) })
+      end
+      self:reload()
     end
-    self:reload()
+
+    if ss == "U" and us == "U" then
+      puff.confirm({ prompt = "git.stage.UU", ents = { "处理过合并冲突了", "还没啊" } }, function(confirmed)
+        if confirmed then stage() end
+      end)
+    else
+      stage()
+    end
   end
 
   do
