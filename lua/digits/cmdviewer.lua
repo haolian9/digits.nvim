@@ -5,19 +5,8 @@ local ex = require("infra.ex")
 local fn = require("infra.fn")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
-local strlib = require("infra.strlib")
 
 local api = vim.api
-
----for `git --no-pager status`, `git status`
----@param args string[]
----@return string
-local function find_subcmd_in_args(args)
-  for _, a in ipairs(args) do
-    if not strlib.startswith(a, "-") then return a end
-  end
-  error("unreachable")
-end
 
 ---@param git digits.Git
 ---@param args string[]
@@ -27,18 +16,13 @@ function M.fullscreen_floatwin(git, args)
 
   local bufnr
   do
-    local function namefn(nr) return string.format("git://%s/%d", find_subcmd_in_args(args), nr) end
+    local function namefn(nr) return string.format("git://%s/%d", git:find_subcmd_in_args(args), nr) end
     bufnr = Ephemeral({ namefn = namefn, handyclose = true }, lines)
     prefer.bo(bufnr, "filetype", "git")
   end
 
-  local winid
-  do
-    winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
-    local wo = prefer.win(winid)
-    wo.list = false
-    wo.winbar = fn.join(fn.chained({ "git" }, args), " ")
-  end
+  local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
+  prefer.wo(winid, "list", false)
 
   return bufnr
 end
@@ -51,7 +35,7 @@ function M.tab(git, args)
 
   local bufnr
   do
-    local function namefn(nr) return string.format("git://%s/%d", find_subcmd_in_args(args), nr) end
+    local function namefn(nr) return string.format("git://%s/%d", git:find_subcmd_in_args(args), nr) end
     bufnr = Ephemeral({ namefn = namefn, handyclose = true }, lines)
     prefer.bo(bufnr, "filetype", "git")
   end

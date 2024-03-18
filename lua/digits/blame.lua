@@ -7,6 +7,7 @@ local ex = require("infra.ex")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.blame", "info")
 local bufmap = require("infra.keymap.buffer")
+local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 
 local sting = require("sting")
@@ -107,7 +108,7 @@ do
     local blame_winid
     do
       local winopts = { relative = "cursor", row = -1, col = 0, width = blame_len + 2, height = 1 }
-      blame_winid = api.nvim_open_win(blame_bufnr, false, winopts)
+      blame_winid = rifts.open.win(blame_bufnr, false, winopts)
     end
 
     local aug = Augroup.buf(bufnr, true)

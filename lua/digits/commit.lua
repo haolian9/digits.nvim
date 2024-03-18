@@ -60,7 +60,7 @@ end
 ---@param on_exit? fun() @called when the commit command completed
 function M.floatwin(git, on_exit)
   local bufnr = compose_the_buffer(git, on_exit)
-  local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor", border = "single" })
+  local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
   prefer.wo(winid, "list", false)
 end
 
