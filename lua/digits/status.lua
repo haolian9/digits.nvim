@@ -16,6 +16,7 @@ local bufmap = require("infra.keymap.buffer")
 local rifts = require("infra.rifts")
 
 local commit = require("digits.commit")
+local push = require("digits.push")
 local puff = require("puff")
 
 local api = vim.api
@@ -312,6 +313,7 @@ return function(git)
       bm.n("D", function() rhs:interactive_unstage_all() end)
       bm.n("x", function() rhs:clean() end)
       bm.n("X", function() rhs:interactive_clean_all() end)
+      bm.n("Y", function() push(git) end)
     end
     do
       bm.n("i", function() rhs:edit("edit") end)

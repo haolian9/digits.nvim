@@ -15,7 +15,9 @@ local Git = require("digits.Git")
 local api = vim.api
 
 local function create_git()
-  local root = project.git_root()
+  local bufnr = api.nvim_get_current_buf()
+  local root = project.git_root(bufnr)
+  --todo: recognize the buffers created by digits itself
   if root == nil then error("unable to solve the git root") end
   return Git(root)
 end

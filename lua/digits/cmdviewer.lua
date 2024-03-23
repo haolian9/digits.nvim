@@ -8,6 +8,7 @@ local rifts = require("infra.rifts")
 
 local api = vim.api
 
+---NB: only the stdout is visible, but not stderr
 ---@param git digits.Git
 ---@param args string[]
 ---@return integer @bufnr
@@ -27,6 +28,7 @@ function M.fullscreen_floatwin(git, args)
   return bufnr
 end
 
+---NB: only the stdout is visible, but not stderr
 ---@param git digits.Git
 ---@param args string[]
 ---@return integer @bufnr
