@@ -10,6 +10,7 @@ local bufmap = require("infra.keymap.buffer")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 
+local create_git = require("digits.create_git")
 local sting = require("sting")
 
 local api = vim.api
@@ -85,8 +86,12 @@ do
     return Blame(path, lnum, obj, author, date)
   end
 
-  ---@param git digits.Git
+  ---@param git? digits.Git
+  ---@param winid? integer
   function M.line(git, winid)
+    git = git or create_git()
+    winid = winid or api.nvim_get_current_win()
+
     local bufnr = api.nvim_win_get_buf(winid)
 
     local blame
@@ -135,7 +140,12 @@ do
     return string.format("%s %s %s|%d|%s", author, date, obj, lnum, line)
   end
 
+  ---@param git? digits.Git
+  ---@param winid? integer
   function M.file(git, winid)
+    git = git or create_git()
+    winid = winid or api.nvim_get_current_win()
+
     local bufnr = api.nvim_win_get_buf(winid)
 
     local path = resolve_path(git, bufnr)

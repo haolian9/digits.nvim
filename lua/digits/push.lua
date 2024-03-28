@@ -1,6 +1,8 @@
 local jelly = require("infra.jellyfish")("digits.push", "info")
 local strlib = require("infra.strlib")
 
+local create_git = require("digits.create_git")
+
 ---@param git digits.Git
 local function resolve_push_remote(git)
   local curbr = assert(git:run({ "branch", "--show-current" })())
@@ -27,8 +29,10 @@ local function resolve_push_remote(git)
   return remote, branch
 end
 
----@param git digits.Git
+---@param git? digits.Git
 return function(git)
+  git = git or create_git()
+
   local remote, branch = resolve_push_remote(git)
   if not (remote and branch) then return end
 

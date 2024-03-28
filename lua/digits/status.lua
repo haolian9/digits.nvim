@@ -5,6 +5,8 @@
 --  * enum: '?AMDRU '
 --    * UU: unstaged && unmerged, when rebase
 
+local M = {}
+
 local Augroup = require("infra.Augroup")
 local ctx = require("infra.ctx")
 local Ephemeral = require("infra.Ephemeral")
@@ -14,8 +16,10 @@ local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.status", "info")
 local bufmap = require("infra.keymap.buffer")
 local rifts = require("infra.rifts")
+local winsplit = require("infra.winsplit")
 
 local commit = require("digits.commit")
+local create_git = require("digits.create_git")
 local push = require("digits.push")
 local puff = require("puff")
 
@@ -268,20 +272,31 @@ do
 
   function Prototype:interactive_clean_all() self.git:floatterm({ "clean", "--interactive", "-d" }, nil, { cbreak = true }) end
 
-  ---@param edit_cmd string @modifiers are not supported, eg. `leftabove split`
-  function Prototype:edit(edit_cmd)
-    local winid = api.nvim_get_current_win()
+  do
+    local function is_landed_win(winid) return api.nvim_win_get_config(winid).relative == "" end
 
-    local target
-    do
-      local ss, us, path, renamed_path = parse_current_entry(winid)
-      if ss == nil then return end
-      if ss == "D" or us == "D" then return jelly.debug("file was deleted already") end
-      target = ss == "R" and renamed_path or path
+    ---@param edit_cmd string @'left'|'right'|'above'|'below'|'edit'|'tabedit'
+    function Prototype:edit(edit_cmd)
+      local winid = api.nvim_get_current_win()
+
+      local target
+      do
+        local ss, us, path, renamed_path = parse_current_entry(winid)
+        if ss == nil then return end
+        if ss == "D" or us == "D" then return jelly.debug("file was deleted already") end
+        target = ss == "R" and renamed_path or path
+        assert(target)
+      end
+
+      --no closing landed window, eg. M.win1000
+      if not is_landed_win(winid) then api.nvim_win_close(winid, false) end
+
+      if edit_cmd == "edit" or edit_cmd == "tabedit" then
+        ex(edit_cmd, target)
+      else
+        winsplit(edit_cmd, target)
+      end
     end
-
-    api.nvim_win_close(winid, false)
-    ex(edit_cmd, target)
   end
 
   ---@param git digits.Git
@@ -291,7 +306,8 @@ do
 end
 
 ---@param git digits.Git
-return function(git)
+---@param create_win fun(bufnr: integer): integer
+local function main(git, create_win)
   local bufnr
   do
     local function namefn(nr) return string.format("git://status/%s/%d", fs.basename(git.root), nr) end
@@ -317,13 +333,15 @@ return function(git)
     end
     do
       bm.n("i", function() rhs:edit("edit") end)
-      bm.n("o", function() rhs:edit("split") end)
-      bm.n("v", function() rhs:edit("split") end)
+      bm.n("o", function() rhs:edit("below") end)
+      bm.n("O", function() rhs:edit("above") end)
+      bm.n("v", function() rhs:edit("right") end)
+      bm.n("V", function() rhs:edit("left") end)
       bm.n("t", function() rhs:edit("tabedit") end)
     end
   end
 
-  local winid = rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
+  local winid = create_win(bufnr)
 
   --reload
   local aug = Augroup.win(winid, true)
@@ -339,3 +357,46 @@ return function(git)
 
   rhs:reload()
 end
+
+---@param git? digits.Git
+function M.floatwin(git)
+  git = git or create_git()
+
+  main(git, function(bufnr) return rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 }) end)
+end
+
+---@param git? digits.Git
+---@param side infra.winsplit.Side
+function M.split(git, side)
+  git = git or create_git()
+
+  main(git, function(bufnr)
+    winsplit(side, api.nvim_buf_get_name(bufnr))
+    local winid = api.nvim_get_current_win()
+    api.nvim_win_set_buf(winid, bufnr)
+    return winid
+  end)
+end
+
+---@param git? digits.Git
+function M.win1000(git)
+  git = git or create_git()
+
+  main(git, function(bufnr)
+    local winid = api.nvim_get_current_win()
+    api.nvim_win_set_buf(winid, bufnr)
+    return winid
+  end)
+end
+
+---@param git? digits.Git
+function M.tab(git)
+  git = git or create_git()
+
+  main(git, function(bufnr)
+    ex("tabedit", string.format("sbuffer %d", bufnr))
+    return api.nvim_get_current_win()
+  end)
+end
+
+return M

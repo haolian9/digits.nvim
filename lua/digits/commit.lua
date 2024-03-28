@@ -8,6 +8,8 @@ local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 
+local create_git = require("digits.create_git")
+
 local api = vim.api
 
 ---@param bufnr integer
@@ -55,19 +57,22 @@ local function compose_the_buffer(git, on_exit)
   return bufnr
 end
 
----equals `git commit --verbose`
----@param git digits.Git
+---equal to `git commit --verbose`
+---@param git? digits.Git
 ---@param on_exit? fun() @called when the commit command completed
 function M.floatwin(git, on_exit)
+  git = git or create_git()
   local bufnr = compose_the_buffer(git, on_exit)
   local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
   prefer.wo(winid, "list", false)
 end
 
----equals `git commit --verbose`
----@param git digits.Git
+---equal to `git commit --verbose`
+---@param git? digits.Git
 ---@param on_exit? fun() @called when the commit command completed
 function M.tab(git, on_exit)
+  git = git or create_git()
+
   local bufnr = compose_the_buffer(git, on_exit)
   ex("tabedit", api.nvim_buf_get_name(bufnr))
   prefer.wo(api.nvim_get_current_win(), "list", false)

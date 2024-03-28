@@ -3,12 +3,15 @@ local bufmap = require("infra.keymap.buffer")
 local listlib = require("infra.listlib")
 
 local cmdviewer = require("digits.cmdviewer")
+local create_git = require("digits.create_git")
 
 local api = vim.api
 
----@param git digits.Git
----@param n? integer
+---@param git? digits.Git
+---@param n? integer @nil means show whole log
 return function(git, n)
+  git = git or create_git()
+
   local args = { "--no-pager", "log" }
   if n ~= nil then listlib.extend(args, { "-n", tostring(n) }) end
 

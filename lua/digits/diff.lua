@@ -3,11 +3,14 @@ local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.diff", "info")
 
 local cmdviewer = require("digits.cmdviewer")
+local create_git = require("digits.create_git")
 
----@param git digits.Git
----@param bufnr? integer
+---@param git? digits.Git
+---@param bufnr? integer @nil means diff of whole repo
 ---@param cached? boolean @nil=false
 return function(git, bufnr, cached)
+  git = git or create_git()
+
   local args = { "--no-pager", "diff", "HEAD" }
 
   if cached then table.insert(args, "--cached") end
