@@ -6,5 +6,5 @@ return function(...)
   assert(#args > 0)
 
   local git = create_git()
-  git:floatterm(args, {}, { insert = false, autoclose = false })
+  git:floatterm(args, {}, { insert = false, auto_close = false })
 end

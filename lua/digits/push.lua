@@ -1,4 +1,5 @@
 local jelly = require("infra.jellyfish")("digits.push", "info")
+local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 
 local create_git = require("digits.create_git")
@@ -36,5 +37,11 @@ return function(git)
   local remote, branch = resolve_push_remote(git)
   if not (remote and branch) then return end
 
-  git:floatterm({ "push", remote, branch }, nil, { autoclose = false })
+  git:floatterm({ "push", remote, branch }, nil, {
+    auto_close = false,
+    open_win = function(bufnr)
+      --the same size of digits.status window
+      return rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
+    end,
+  })
 end

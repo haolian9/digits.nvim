@@ -50,12 +50,13 @@ do
 
     ---@class digits.GitTermSpec
     ---@field insert?    boolean @nil=true, enter the insert/terminal mode
-    ---@field autoclose? boolean @nil=true, only when exit code is 0
+    ---@field auto_close? boolean @nil=true, only when exit code is 0
     ---@field cbreak?    boolean @nil=false, the cbreak mode
+    ---@field open_win?  fun(bufnr: integer): integer  @which returns the opened winid
 
     local resolve_termspec
     do
-      local default = { insert = true, autoclose = true }
+      local default = { insert = true, auto_close = true }
       ---@param user_specified? table
       ---@return digits.GitTermSpec
       function resolve_termspec(user_specified)
@@ -98,7 +99,7 @@ do
         aug:once("TermClose", { callback = startinsert })
       end
 
-      if termspec.autoclose then
+      if termspec.auto_close then
         aug:once("TermClose", {
           nested = true,
           callback = function()
@@ -109,18 +110,23 @@ do
         })
       end
 
-      do
-        local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
-        prefer.wo(winid, "list", false)
+      local winid
+      if termspec.open_win then
+        winid = termspec.open_win(bufnr)
+      else
+        winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
+      end
+      prefer.wo(winid, "list", false)
 
-        do
-          table.insert(args, 1, "git")
-          if jobspec.env == nil then jobspec.env = {} end
-          for k, v in pairs(mandatory_envs) do
-            if jobspec.env[k] == nil then jobspec.env[k] = v end
-          end
-          vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
+      do
+        table.insert(args, 1, "git")
+        if jobspec.env == nil then jobspec.env = {} end
+        for k, v in pairs(mandatory_envs) do
+          if jobspec.env[k] == nil then jobspec.env[k] = v end
         end
+        api.nvim_win_call(winid, function() --ensure doing to the right window
+          vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
+        end)
       end
 
       --since termopen will change the buffer name
