@@ -1,4 +1,4 @@
-local Augroup = require("infra.Augroup")
+local augroups = require("infra.augroups")
 local bufrename = require("infra.bufrename")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
@@ -91,7 +91,7 @@ do
       local bufnr = Ephemeral()
       local bufname = string.format("git://%s/%d", self:find_subcmd_in_args(args), bufnr)
 
-      local aug = Augroup.buf(bufnr, true)
+      local aug = augroups.BufAugroup(bufnr, true)
 
       if termspec.insert then
         aug:once("TermOpen", { callback = startinsert })

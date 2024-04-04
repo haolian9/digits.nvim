@@ -1,13 +1,3 @@
---terms
---* status 3-length '{ss}{us} '
---  * ss: staged status
---  * us: unstaged status
---  * enum: '?AMDRU '
---    * UU: unstaged && unmerged, when rebase
-
-local M = {}
-
-local Augroup = require("infra.Augroup")
 local ctx = require("infra.ctx")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
@@ -15,115 +5,15 @@ local fn = require("infra.fn")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.status", "info")
 local bufmap = require("infra.keymap.buffer")
-local rifts = require("infra.rifts")
 local winsplit = require("infra.winsplit")
 
 local commit = require("digits.commit")
-local create_git = require("digits.create_git")
 local push = require("digits.push")
+local contracts = require("digits.status.contracts")
+local signals = require("digits.status.signals")
 local puff = require("puff")
 
 local api = vim.api
-
-local contracts = {}
-do
-  do
-    local truth = {
-      ["??"] = true,
-      ["A "] = false,
-      ["AM"] = true,
-      ["AD"] = true,
-      ["D "] = false,
-      ["R "] = false,
-      ["RM"] = true,
-      ["RD"] = true,
-      ["M "] = false,
-      ["MM"] = true,
-      ["MD"] = true,
-      [" M"] = true,
-      [" D"] = true,
-      ["UU"] = true,
-    }
-    ---@param ss string @stage status
-    ---@param us string @unstage status
-    function contracts.is_stagable(ss, us)
-      local bool = truth[ss .. us]
-      if bool ~= nil then return bool end
-      error(string.format("unexpected status; ss='%s', us='%s'", ss, us))
-    end
-  end
-
-  do
-    local truth = {
-      ["??"] = false,
-      ["A "] = false,
-      ["AM"] = true,
-      ["D "] = false,
-      ["R "] = false,
-      ["RM"] = true,
-      ["RD"] = false,
-      ["M "] = false,
-      ["MM"] = true,
-      ["MD"] = false,
-      [" M"] = true,
-      [" D"] = false,
-      ["UU"] = false, --error: needs merge
-    }
-
-    function contracts.is_interactive_stagable(ss, us)
-      local bool = truth[ss .. us]
-      if bool ~= nil then return bool end
-      error(string.format("unexpected status; ss='%s', us='%s'", ss, us))
-    end
-  end
-
-  do
-    local truth = {
-      ["??"] = false,
-      ["A "] = true,
-      ["AM"] = true,
-      ["AD"] = true,
-      ["D "] = true,
-      ["M "] = true,
-      ["MM"] = true,
-      ["MD"] = true,
-      ["R "] = true,
-      ["RM"] = true,
-      ["RD"] = true,
-      [" M"] = false,
-      [" D"] = false,
-      ["UU"] = false,
-    }
-    ---@param ss string @stage status
-    ---@param us string @unstage status
-    function contracts.is_unstagable(ss, us)
-      local bool = truth[ss .. us]
-      if bool ~= nil then return bool end
-      error(string.format("unexpected status; ss='%s', us='%s'", ss, us))
-    end
-  end
-
-  ---@param line string
-  ---@return string,string,string,(string?) @stage_status, unstage_status, path, renamed_path
-  function contracts.parse_status_line(line)
-    local stage_status = string.sub(line, 1, 1)
-    local unstage_status = string.sub(line, 2, 2)
-
-    local path, renamed_path
-    do
-      if stage_status ~= "R" then
-        path = string.sub(line, 4)
-      else
-        local splits = fn.split_iter(string.sub(line, 4), " -> ")
-        path, renamed_path = splits(), splits()
-        assert(path, path)
-        assert(renamed_path, renamed_path)
-      end
-    end
-
-    return stage_status, unstage_status, path, renamed_path
-  end
-end
 
 local RHS
 do
@@ -148,13 +38,11 @@ do
   ---@class digits.status.RHS
   ---@field private git digits.Git
   ---@field private bufnr integer
-  ---@field private no_reload boolean @some operations may take time, which will not be ready on winenter
-  local Prototype = {}
+  local Impl = {}
 
-  Prototype.__index = Prototype
+  Impl.__index = Impl
 
-  ---@private
-  function Prototype:_reload()
+  function Impl:reload()
     local lines
     do
       local stdout = self.git:run({ "status", "--porcelain=v1", "--ignore-submodules=all" })
@@ -165,12 +53,7 @@ do
     ctx.modifiable(self.bufnr, function() api.nvim_buf_set_lines(self.bufnr, 0, -1, false, lines) end)
   end
 
-  function Prototype:reload()
-    if self.no_reload then return end
-    self:_reload()
-  end
-
-  function Prototype:stage()
+  function Impl:stage()
     local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = parse_current_entry(winid)
     if not (ss and us) then return end
@@ -182,7 +65,7 @@ do
       else
         self.git:silent_run({ "add", assert(renamed_path) })
       end
-      self:reload()
+      signals.reload()
     end
 
     if ss == "U" and us == "U" then
@@ -195,7 +78,7 @@ do
   end
 
   do
-    function Prototype:unstage()
+    function Impl:unstage()
       local winid = api.nvim_get_current_win()
       local ss, us, path, renamed_path = parse_current_entry(winid)
       if not (ss and us) then return end
@@ -205,38 +88,38 @@ do
       else
         self.git:silent_run({ "reset", "--", path, assert(renamed_path) })
       end
-      self:reload()
+      signals.reload()
     end
 
-    function Prototype:interactive_unstage()
+    function Impl:interactive_unstage()
       local winid = api.nvim_get_current_win()
       local ss, us, path, renamed_path = parse_current_entry(winid)
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
       if ss ~= "R" then
-        self.git:floatterm({ "reset", "--patch", "--", path }, nil, { cbreak = true })
+        self.git:floatterm({ "reset", "--patch", "--", path }, { on_exit = signals.reload }, { cbreak = true })
       else
-        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) }, nil, { cbreak = true })
+        self.git:floatterm({ "reset", "--patch", "--", assert(renamed_path) }, { on_exit = signals.reload }, { cbreak = true })
       end
     end
 
-    function Prototype:interactive_unstage_all() self.git:floatterm({ "reset", "--patch" }, nil, { cbreak = true }) end
+    function Impl:interactive_unstage_all() self.git:floatterm({ "reset", "--patch" }, { on_exit = signals.reload }, { cbreak = true }) end
   end
 
-  function Prototype:interactive_stage()
+  function Impl:interactive_stage()
     local winid = api.nvim_get_current_win()
     local ss, us, path, renamed_path = parse_current_entry(winid)
     if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
-      self.git:floatterm({ "add", "--patch", path }, nil, { cbreak = true })
+      self.git:floatterm({ "add", "--patch", path }, { on_exit = signals.reload }, { cbreak = true })
     else
-      self.git:floatterm({ "add", "--patch", assert(renamed_path) }, nil, { cbreak = true })
+      self.git:floatterm({ "add", "--patch", assert(renamed_path) }, { on_exit = signals.on_reload }, { cbreak = true })
     end
   end
 
-  function Prototype:interactive_stage_all() self.git:floatterm({ "add", "--patch", "." }, nil, { cbreak = true }) end
+  function Impl:interactive_stage_all() self.git:floatterm({ "add", "--patch", "." }, { on_exit = signals.reload }, { cbreak = true }) end
 
-  function Prototype:restore()
+  function Impl:restore()
     local winid = api.nvim_get_current_win()
     local ss, us, path = parse_current_entry(winid)
     if ss == nil then return end
@@ -244,39 +127,33 @@ do
     if ss == "A" then return jelly.debug("not a tracked file") end
     if ss ~= " " then return jelly.info("unstage the file first") end
 
-    self.no_reload = true
     puff.confirm({ prompt = "git.restore" }, function(confirmed)
-      if confirmed then
-        self.git:silent_run({ "restore", "--source=HEAD", "--", path })
-        self:_reload()
-      end
-      self.no_reload = false
+      if not confirmed then return end
+      self.git:silent_run({ "restore", "--source=HEAD", "--", path })
+      signals.reload()
     end)
   end
 
-  function Prototype:clean()
+  function Impl:clean()
     local winid = api.nvim_get_current_win()
     local ss, us, path = parse_current_entry(winid)
     if ss == nil then return end
     if not (ss == "?" and us == "?") then return jelly.debug("not a untracked file") end
 
-    self.no_reload = true
     puff.confirm({ prompt = "git.clean" }, function(confirmed)
-      if confirmed then
-        self.git:silent_run({ "clean", "--force", "--", path })
-        self:_reload()
-      end
-      self.no_reload = false
+      if not confirmed then return end
+      self.git:silent_run({ "clean", "--force", "--", path })
+      signals.reload()
     end)
   end
 
-  function Prototype:interactive_clean_all() self.git:floatterm({ "clean", "--interactive", "-d" }, nil, { cbreak = true }) end
+  function Impl:interactive_clean_all() self.git:floatterm({ "clean", "--interactive", "-d" }, { on_exit = signals.reload }, { cbreak = true }) end
 
   do
     local function is_landed_win(winid) return api.nvim_win_get_config(winid).relative == "" end
 
     ---@param edit_cmd string @'left'|'right'|'above'|'below'|'edit'|'tabedit'
-    function Prototype:edit(edit_cmd)
+    function Impl:edit(edit_cmd)
       local winid = api.nvim_get_current_win()
 
       local target
@@ -288,7 +165,7 @@ do
         assert(target)
       end
 
-      --no closing landed window, eg. M.win1000
+      --no closing landed window, eg. .win1000()
       if not is_landed_win(winid) then api.nvim_win_close(winid, false) end
 
       if edit_cmd == "edit" or edit_cmd == "tabedit" then
@@ -299,15 +176,16 @@ do
     end
   end
 
+  function Impl:commit() commit.tab(self.git, signals.reload) end
+
   ---@param git digits.Git
   ---@param bufnr integer
   ---@return digits.status.RHS
-  function RHS(git, bufnr) return setmetatable({ git = git, bufnr = bufnr }, Prototype) end
+  function RHS(git, bufnr) return setmetatable({ git = git, bufnr = bufnr }, Impl) end
 end
 
 ---@param git digits.Git
----@param create_win fun(bufnr: integer): integer
-local function main(git, create_win)
+return function(git)
   local bufnr
   do
     local function namefn(nr) return string.format("git://status/%s/%d", fs.basename(git.root), nr) end
@@ -323,7 +201,7 @@ local function main(git, create_win)
       bm.n("r", function() rhs:reload() end)
       bm.n("p", function() rhs:interactive_stage() end)
       bm.n("P", function() rhs:interactive_stage_all() end)
-      bm.n("w", function() commit.tab(git) end)
+      bm.n("w", function() rhs.commit(git) end)
       bm.n("c", function() rhs:restore() end)
       bm.n("d", function() rhs:interactive_unstage() end)
       bm.n("D", function() rhs:interactive_unstage_all() end)
@@ -341,62 +219,11 @@ local function main(git, create_win)
     end
   end
 
-  local winid = create_win(bufnr)
-
-  --reload
-  local aug = Augroup.win(winid, true)
-  aug:repeats("WinEnter", {
-    callback = function()
-      do -- necessary checks for https://github.com/neovim/neovim/issues/24843
-        if api.nvim_get_current_win() ~= winid then return end
-        if api.nvim_win_get_buf(winid) ~= bufnr then return end
-      end
-      rhs:reload()
-    end,
-  })
-
-  rhs:reload()
-end
-
----@param git? digits.Git
-function M.floatwin(git)
-  git = git or create_git()
-
-  main(git, function(bufnr) return rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 }) end)
-end
-
----@param git? digits.Git
----@param side infra.winsplit.Side
-function M.split(git, side)
-  git = git or create_git()
-
-  main(git, function(bufnr)
-    winsplit(side, api.nvim_buf_get_name(bufnr))
-    local winid = api.nvim_get_current_win()
-    api.nvim_win_set_buf(winid, bufnr)
-    return winid
+  signals.on_reload(function()
+    if not api.nvim_buf_is_valid(bufnr) then return true end
+    rhs:reload()
   end)
+  signals.reload()
+
+  return bufnr
 end
-
----@param git? digits.Git
-function M.win1000(git)
-  git = git or create_git()
-
-  main(git, function(bufnr)
-    local winid = api.nvim_get_current_win()
-    api.nvim_win_set_buf(winid, bufnr)
-    return winid
-  end)
-end
-
----@param git? digits.Git
-function M.tab(git)
-  git = git or create_git()
-
-  main(git, function(bufnr)
-    ex("tabedit", string.format("sbuffer %d", bufnr))
-    return api.nvim_get_current_win()
-  end)
-end
-
-return M

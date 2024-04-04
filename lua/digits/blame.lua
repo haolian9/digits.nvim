@@ -1,6 +1,6 @@
 local M = {}
 
-local Augroup = require("infra.Augroup")
+local augroups = require("infra.augroups")
 local bufpath = require("infra.bufpath")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
@@ -116,7 +116,7 @@ do
       blame_winid = rifts.open.win(blame_bufnr, false, winopts)
     end
 
-    local aug = Augroup.buf(bufnr, true)
+    local aug = augroups.BufAugroup(bufnr, true)
     aug:once("CursorMoved", {
       callback = function()
         if not api.nvim_win_is_valid(blame_winid) then return end
