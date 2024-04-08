@@ -4,8 +4,8 @@ local ex = require("infra.ex")
 local rifts = require("infra.rifts")
 local winsplit = require("infra.winsplit")
 
+local create_buf = require("digits.cmds.status.create_buf")
 local create_git = require("digits.create_git")
-local create_buf = require("digits.status.create_buf")
 
 local api = vim.api
 
@@ -46,7 +46,7 @@ function M.tab(git)
 
   local bufnr = create_buf(git)
 
-  ex("tabedit", string.format("sbuffer %d", bufnr))
+  ex.eval("tabedit sbuffer %d", bufnr)
 end
 
 return M

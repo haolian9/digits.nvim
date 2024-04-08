@@ -1,6 +1,5 @@
 local M = {}
 
-local prefer = require("infra.prefer")
 local project = require("infra.project")
 local strlib = require("infra.strlib")
 

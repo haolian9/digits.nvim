@@ -3,7 +3,7 @@ local M = {}
 local bufpath = require("infra.bufpath")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
-local jelly = require("infra.jellyfish")("digits.diffhunks")
+local jelly = require("infra.jellyfish")("digits.cmds.diffhunks")
 
 local create_git = require("digits.create_git")
 local sting = require("sting")

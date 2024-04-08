@@ -3,14 +3,14 @@ local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
-local jelly = require("infra.jellyfish")("digits.status", "info")
+local jelly = require("infra.jellyfish")("digits.cmds.status", "info")
 local bufmap = require("infra.keymap.buffer")
 local winsplit = require("infra.winsplit")
 
-local commit = require("digits.commit")
-local push = require("digits.push")
-local contracts = require("digits.status.contracts")
-local signals = require("digits.status.signals")
+local commit = require("digits.cmds.commit")
+local push = require("digits.cmds.push")
+local contracts = require("digits.cmds.status.contracts")
+local signals = require("digits.cmds.status.signals")
 local puff = require("puff")
 
 local api = vim.api
@@ -152,7 +152,7 @@ do
   do
     local function is_landed_win(winid) return api.nvim_win_get_config(winid).relative == "" end
 
-    ---@param edit_cmd string @'left'|'right'|'above'|'below'|'edit'|'tabedit'
+    ---@param edit_cmd 'edit'|'tabedit'|infra.winsplit.Side
     function Impl:edit(edit_cmd)
       local winid = api.nvim_get_current_win()
 

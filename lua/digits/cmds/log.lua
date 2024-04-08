@@ -1,4 +1,4 @@
-local jelly = require("infra.jellyfish")("digits.log")
+local jelly = require("infra.jellyfish")("digits.cmds.log")
 local bufmap = require("infra.keymap.buffer")
 local listlib = require("infra.listlib")
 
@@ -22,6 +22,6 @@ return function(git, n)
     local line = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1]
     local hash = string.match(line, "^commit (%x+)$")
     if hash == nil then return jelly.warn("no availabl object under cursor") end
-    require("digits.show")(git, hash)
+    require("digits.cmds.show")(git, hash)
   end)
 end

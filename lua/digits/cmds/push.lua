@@ -1,4 +1,4 @@
-local jelly = require("infra.jellyfish")("digits.push", "info")
+local jelly = require("infra.jellyfish")("digits.cmds.push", "info")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 

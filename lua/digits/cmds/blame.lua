@@ -5,7 +5,7 @@ local bufpath = require("infra.bufpath")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fs = require("infra.fs")
-local jelly = require("infra.jellyfish")("digits.blame", "info")
+local jelly = require("infra.jellyfish")("digits.cmds.blame", "info")
 local bufmap = require("infra.keymap.buffer")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
@@ -107,7 +107,7 @@ do
       blame_len = #line
       blame_bufnr = Ephemeral({ handyclose = true }, { line })
 
-      bufmap(blame_bufnr, "n", "gf", function() require("digits.show")(git, string.format("%s:%s", blame.obj, blame.path)) end)
+      bufmap(blame_bufnr, "n", "gf", function() require("digits.cmds.show")(git, string.format("%s:%s", blame.obj, blame.path)) end)
     end
 
     local blame_winid
@@ -163,7 +163,7 @@ do
       loclist:feed_vim(true, false)
 
       local loc_idx = api.nvim_win_get_cursor(winid)[1]
-      ex("ll " .. loc_idx)
+      ex.eval("ll %d", loc_idx)
     end
 
     --it's really hard to maintain a usable side-by-side aligned via scrollbind'ed of locwin&blamed-buffer

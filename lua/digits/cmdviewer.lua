@@ -42,7 +42,7 @@ function M.tab(git, args)
     prefer.bo(bufnr, "filetype", "git")
   end
 
-  ex("tab sb " .. bufnr)
+  ex.eval("tab sb %d", bufnr)
 
   local winid = api.nvim_get_current_win()
   prefer.wo(winid, "list", false)
