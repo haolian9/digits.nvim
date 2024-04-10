@@ -1,5 +1,6 @@
 local M = {}
 
+local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local fn = require("infra.fn")
@@ -11,12 +12,6 @@ local strlib = require("infra.strlib")
 local create_git = require("digits.create_git")
 
 local api = vim.api
-
----@param bufnr integer
----@return fun(): string?
-local function buflines(bufnr)
-  return fn.map(function(lnum) return api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1] end, fn.range(api.nvim_buf_line_count(bufnr)))
-end
 
 ---@param git digits.Git
 ---@param on_exit? fun() @called when the commit command completed
@@ -44,7 +39,7 @@ local function compose_the_buffer(git, on_exit)
     once = true,
     callback = function()
       local msgs = {}
-      for line in buflines(bufnr) do
+      for line in buflines.iter(bufnr) do
         if strlib.startswith(line, "#") then break end
         table.insert(msgs, line)
       end
