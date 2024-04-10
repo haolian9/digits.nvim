@@ -1,4 +1,4 @@
-provide some git workflows based on nvim
+provide some git workflows run in nvim
 
 ## design choices
 * git cli is good
@@ -26,10 +26,12 @@ provide some git workflows based on nvim
 * [x] ~~libgit2 instead of git bin~~ i quite satisfied with git bin
 * [x] ~~git commit --fixup~~ just run it in a float term
 * [x] git push when upstream is set for current branch
+* [x] git commit --fixup {hash}
+* [ ] floating or not, that is the question
 
 ## status
 * just works
-* feature-complete
+* yet not supposed to be used publicly
 
 ## requirements
 * linux
@@ -45,24 +47,23 @@ provide some git workflows based on nvim
 
 here is my personal config
 ```
-do
-  m.n("<leader>x", function() require("digits.status").floatwin() end)
-
-  do --requires haolian9/cmds.nvim
-    local handlers = {
-      status = function() require("digits.status").floatwin() end,
-      push = function() require("digits.push")() end,
-      hunks = function() require("digits.diffhunks").setloclist() end,
-      diff = function() require("digits.diff")() end,
-      diff_file = function() require("digits.diff")(nil, api.nvim_get_current_buf()) end,
-      diff_cached = function() require("digits.diff")(nil, nil, true) end,
-      log = function() require("digits.log")(nil, 100) end,
-      commit = function() require("digits.commit").tab() end,
-    }
-    local comp = cmds.ArgComp.constant(dictlib.keys(handlers))
-    local spell = cmds.Spell("Git", function(args) assert(handlers[args.subcmd])() end)
-    spell:add_arg("subcmd", "string", false, "status", comp)
-    cmds.cast(spell)
-  end
+do --requires haolian9/cmds.nvim
+  local handlers = {
+    status = function() require("digits.cmds.status").floatwin() end,
+    push = function() require("digits.cmds.push")() end,
+    hunks = function() require("digits.cmds.diffhunks").setloclist() end,
+    diff = function() require("digits.cmds.diff")() end,
+    diff_file = function() require("digits.cmds.diff")(nil, api.nvim_get_current_buf()) end,
+    diff_cached = function() require("digits.cmds.diff")(nil, nil, true) end,
+    log = function() require("digits.cmds.log")(nil, 100) end,
+    commit = function() require("digits.cmds.commit").tab() end,
+    blame = function() require("digits.cmds.blame").file() end,
+    blame_line = function() require("digits.cmds.blame").line() end,
+    fixup = function() require("digits.cmds.fixup")() end,
+  }
+  local comp = cmds.ArgComp.constant(dictlib.keys(handlers))
+  local spell = cmds.Spell("Git", function(args) assert(handlers[args.subcmd])() end)
+  spell:add_arg("subcmd", "string", false, "status", comp)
+  cmds.cast(spell)
 end
 ```
