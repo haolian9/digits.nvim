@@ -3,7 +3,6 @@ local M = {}
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
-local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.cmds.commit", "info")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
@@ -45,7 +44,7 @@ local function compose_the_buffer(git, on_exit)
       end
       if #msgs == 0 or msgs[1] == "" then return jelly.info("Aborting commit due to empty commit message.") end
 
-      git:floatterm({ "commit", "-m", table.concat(msgs, "\n") }, { on_exit = on_exit })
+      git:floatterm({ "commit", "-m", table.concat(msgs, "\n") }, { on_exit = on_exit }, { auto_close = false })
     end,
   })
 
@@ -69,7 +68,7 @@ function M.tab(git, on_exit)
   git = git or create_git()
 
   local bufnr = compose_the_buffer(git, on_exit)
-  ex("tabedit", api.nvim_buf_get_name(bufnr))
+  ex.eval("tab sbuffer %d", bufnr)
   prefer.wo(api.nvim_get_current_win(), "list", false)
 end
 

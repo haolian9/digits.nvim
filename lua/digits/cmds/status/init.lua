@@ -46,7 +46,7 @@ function M.tab(git)
 
   local bufnr = create_buf(git)
 
-  ex.eval("tabedit sbuffer %d", bufnr)
+  ex.eval("tab sbuffer %d", bufnr)
 end
 
 return M

@@ -49,14 +49,15 @@ do
     local function startinsert() ex("startinsert") end
 
     ---@class digits.GitTermSpec
-    ---@field insert?    boolean @nil=true, enter the insert/terminal mode
+    ---@field insert?     boolean @nil=true, enter the insert/terminal mode
     ---@field auto_close? boolean @nil=true, only when exit code is 0
-    ---@field cbreak?    boolean @nil=false, the cbreak mode
-    ---@field open_win?  fun(bufnr: integer): integer  @which returns the opened winid
+    ---@field cbreak?     boolean @nil=false, the cbreak mode
+    ---@field open_win?   fun(bufnr: integer): integer  @which returns the opened winid
+    ---@field color?      boolean @nil=true, if enable color
 
     local resolve_termspec
     do
-      local default = { insert = true, auto_close = true }
+      local default = { insert = true, auto_close = true, color = true }
       ---@param user_specified? table
       ---@return digits.GitTermSpec
       function resolve_termspec(user_specified)
@@ -81,6 +82,7 @@ do
       end
     end
 
+    ---as default it shows output of the given cmd in a fullscreen window
     ---@param args string[]
     ---@param jobspec? {on_exit?: fun(job: integer, exit_code: integer, event: 'exit'), env?: {[string]: string}}
     ---@param termspec? digits.GitTermSpec
@@ -120,10 +122,11 @@ do
 
       do
         table.insert(args, 1, "git")
+
         if jobspec.env == nil then jobspec.env = {} end
-        for k, v in pairs(mandatory_envs) do
-          if jobspec.env[k] == nil then jobspec.env[k] = v end
-        end
+        dictlib.merge(jobspec.env, mandatory_envs)
+        if termspec.color then jobspec.env.GIT_CONFIG_PARAMETERS = "'color.ui=always'" end
+
         api.nvim_win_call(winid, function() --ensure doing to the right window
           vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
         end)

@@ -8,6 +8,7 @@ local bufmap = require("infra.keymap.buffer")
 local winsplit = require("infra.winsplit")
 
 local commit = require("digits.cmds.commit")
+local fixup = require("digits.cmds.fixup")
 local push = require("digits.cmds.push")
 local contracts = require("digits.cmds.status.contracts")
 local signals = require("digits.cmds.status.signals")
@@ -171,12 +172,17 @@ do
       if edit_cmd == "edit" or edit_cmd == "tabedit" then
         ex(edit_cmd, target)
       else
+        ---@diagnostic disable-next-line: param-type-mismatch
         winsplit(edit_cmd, target)
       end
     end
   end
 
   function Impl:commit() commit.tab(self.git, signals.reload) end
+
+  function Impl:fixup() fixup.tab(self.git, signals.reload) end
+
+  function Impl:push() push.tab(self.git) end
 
   ---@param git digits.Git
   ---@param bufnr integer
@@ -201,13 +207,14 @@ return function(git)
       bm.n("r", function() rhs:reload() end)
       bm.n("p", function() rhs:interactive_stage() end)
       bm.n("P", function() rhs:interactive_stage_all() end)
-      bm.n("w", function() rhs.commit(git) end)
+      bm.n("w", function() rhs:commit() end)
+      bm.n("W", function() rhs:fixup() end)
       bm.n("c", function() rhs:restore() end)
       bm.n("d", function() rhs:interactive_unstage() end)
       bm.n("D", function() rhs:interactive_unstage_all() end)
       bm.n("x", function() rhs:clean() end)
       bm.n("X", function() rhs:interactive_clean_all() end)
-      bm.n("Y", function() push(git) end)
+      bm.n("Y", function() rhs:push() end)
     end
     do
       bm.n("i", function() rhs:edit("edit") end)
