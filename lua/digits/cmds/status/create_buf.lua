@@ -1,3 +1,4 @@
+local buflines = require("infra.buflines")
 local ctx = require("infra.ctx")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
@@ -26,9 +27,7 @@ do
     do
       local lnum = assert(api.nvim_win_get_cursor(winid))[1] - 1
       local bufnr = api.nvim_win_get_buf(winid)
-      local lines = api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)
-      assert(#lines == 1)
-      line = lines[1]
+      line = assert(buflines.line(bufnr, lnum))
       if #line < 1 then return jelly.debug("blank line lnum#%d", lnum) end
       assert(#line >= 4)
     end
@@ -51,7 +50,7 @@ do
       lines = fn.tolist(stdout)
     end
 
-    ctx.modifiable(self.bufnr, function() api.nvim_buf_set_lines(self.bufnr, 0, -1, false, lines) end)
+    ctx.modifiable(self.bufnr, function() buflines.replaces_all(self.bufnr, lines) end)
   end
 
   function Impl:stage()

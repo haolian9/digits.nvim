@@ -21,7 +21,7 @@ local function compose_buf(git)
 end
 
 local function find_chosen_hash(bufnr)
-  local iter = buflines.unmatched(bufnr, "^#")
+  local iter = buflines.iter_unmatched(bufnr, "^#")
   local line = iter()
   if line == nil then return end
   line = strlib.lstrip(line)

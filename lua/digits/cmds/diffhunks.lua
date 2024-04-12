@@ -1,5 +1,6 @@
 local M = {}
 
+local buflines = require("infra.buflines")
 local bufpath = require("infra.bufpath")
 local fn = require("infra.fn")
 local fs = require("infra.fs")
@@ -30,7 +31,7 @@ function M.setloclist(git, winid)
 
   do
     local old = fn.join(git:run(args), "\n")
-    local now = fn.join(api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+    local now = fn.join(buflines.all(bufnr), "\n")
     local shelf = sting.location.shelf(winid, "diffhunks")
     shelf:reset()
     vim.diff(now, old, {
