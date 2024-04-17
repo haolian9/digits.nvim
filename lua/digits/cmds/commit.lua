@@ -17,10 +17,13 @@ local api = vim.api
 local function compose_the_buffer(git, on_exit)
   local infos = {}
   do
-    for line in git:run({ "status" }) do
+    local status = git:run({ "status" }, { configs = { ["advice.statusHints"] = "false" } })
+    for line in status do
       table.insert(infos, "# " .. line)
     end
-    for line in git:run({ "--no-pager", "diff", "--cached" }) do
+
+    local diff = git:run({ "--no-pager", "diff", "--cached" })
+    for line in diff do
       table.insert(infos, line)
     end
   end
