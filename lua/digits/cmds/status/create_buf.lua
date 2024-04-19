@@ -8,6 +8,7 @@ local jelly = require("infra.jellyfish")("digits.cmds.status", "info")
 local bufmap = require("infra.keymap.buffer")
 local winsplit = require("infra.winsplit")
 
+local amend = require("digits.cmds.amend")
 local commit = require("digits.cmds.commit")
 local fixup = require("digits.cmds.fixup")
 local push = require("digits.cmds.push")
@@ -61,9 +62,9 @@ do
 
     local function stage()
       if ss ~= "R" then
-        self.git:silent_run({ "add", path })
+        self.git:execute({ "add", path })
       else
-        self.git:silent_run({ "add", assert(renamed_path) })
+        self.git:execute({ "add", assert(renamed_path) })
       end
       signals.reload()
     end
@@ -84,9 +85,9 @@ do
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
       if ss ~= "R" then
-        self.git:silent_run({ "reset", "--", path })
+        self.git:execute({ "reset", "--", path })
       else
-        self.git:silent_run({ "reset", "--", path, assert(renamed_path) })
+        self.git:execute({ "reset", "--", path, assert(renamed_path) })
       end
       signals.reload()
     end
@@ -129,7 +130,7 @@ do
 
     puff.confirm({ prompt = "git.restore" }, function(confirmed)
       if not confirmed then return end
-      self.git:silent_run({ "restore", "--source=HEAD", "--", path })
+      self.git:execute({ "restore", "--source=HEAD", "--", path })
       signals.reload()
     end)
   end
@@ -142,7 +143,7 @@ do
 
     puff.confirm({ prompt = "git.clean" }, function(confirmed)
       if not confirmed then return end
-      self.git:silent_run({ "clean", "--force", "--", path })
+      self.git:execute({ "clean", "--force", "--", path })
       signals.reload()
     end)
   end
@@ -178,9 +179,8 @@ do
   end
 
   function Impl:commit() commit.tab(self.git, signals.reload) end
-
   function Impl:fixup() fixup.tab(self.git, signals.reload) end
-
+  function Impl:amend() amend.tab(self.git, signals.reload) end
   function Impl:push() push.tab(self.git) end
 
   ---@param git digits.Git
@@ -207,7 +207,8 @@ return function(git)
       bm.n("p", function() rhs:interactive_stage() end)
       bm.n("P", function() rhs:interactive_stage_all() end)
       bm.n("w", function() rhs:commit() end)
-      bm.n("W", function() rhs:fixup() end)
+      bm.n("W", function() rhs:amend() end)
+      bm.n("F", function() rhs:fixup() end)
       bm.n("c", function() rhs:restore() end)
       bm.n("d", function() rhs:interactive_unstage() end)
       bm.n("D", function() rhs:interactive_unstage_all() end)

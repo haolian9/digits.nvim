@@ -12,6 +12,21 @@ local create_git = require("digits.create_git")
 
 local api = vim.api
 
+---collect from the first line, until a #-prefixed line
+---@param bufnr integer
+---@return nil|string
+local function collect_msg(bufnr)
+  local lines = {}
+  for line in buflines.iter(bufnr) do
+    if strlib.startswith(line, "#") then break end
+    table.insert(lines, line)
+  end
+
+  if #lines == 0 or lines[1] == "" then return end
+
+  return table.concat(lines, "\n")
+end
+
 ---@param git digits.Git
 ---@param on_exit? fun() @called when the commit command completed
 local function compose_the_buffer(git, on_exit)
@@ -40,14 +55,9 @@ local function compose_the_buffer(git, on_exit)
     buffer = bufnr,
     once = true,
     callback = function()
-      local msgs = {}
-      for line in buflines.iter(bufnr) do
-        if strlib.startswith(line, "#") then break end
-        table.insert(msgs, line)
-      end
-      if #msgs == 0 or msgs[1] == "" then return jelly.info("Aborting commit due to empty commit message.") end
-
-      git:floatterm({ "commit", "-m", table.concat(msgs, "\n") }, { on_exit = on_exit }, { auto_close = false })
+      local msg = collect_msg(bufnr)
+      if msg == nil then return jelly.info("Aborting commit due to empty commit message.") end
+      git:floatterm({ "commit", "-m", msg }, { on_exit = on_exit }, { auto_close = false })
     end,
   })
 
