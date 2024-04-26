@@ -77,7 +77,7 @@ do
 
     local line
     do
-      local output = git:run({ "--no-pager", "blame", "--date=short", "--abbrev=7", "-L", string.format("%d,%d", lnum + 1, lnum + 1), "--", path })
+      local output = git:run({ "--no-pager", "blame", "--date=short", "--abbrev=8", "-L", string.format("%d,%d", lnum + 1, lnum + 1), "--", path })
       line = output()
       assert(line ~= nil and line ~= "")
     end
@@ -156,7 +156,7 @@ do
       ---@diagnostic disable-next-line: invisible
       loclist.flavor = pickle_flavor
       loclist:reset()
-      local output = git:run({ "--no-pager", "blame", "--date=short", "--abbrev=7", "--", path })
+      local output = git:run({ "--no-pager", "blame", "--date=short", "--abbrev=8", "--", path })
       for line in output do
         loclist:append(blame_to_pickle(bufnr, line))
       end

@@ -15,7 +15,7 @@ local api = vim.api
 ---@param git digits.Git
 ---@return integer
 local function compose_buf(git)
-  local stdout = git:run({ "log", "--oneline", "-n", "20" })
+  local stdout = git:run({ "log", "--oneline", "--abbrev=8", "-n", "20" })
   local lines = fn.tolist(fn.map(function(line) return "# " .. line end, stdout))
   return Ephemeral({ undolevels = 10, modifiable = true, namepat = "git://fixup/{bufnr}" }, lines)
 end
