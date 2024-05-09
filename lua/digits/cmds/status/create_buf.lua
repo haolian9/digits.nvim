@@ -6,6 +6,7 @@ local fn = require("infra.fn")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.cmds.status", "info")
 local bufmap = require("infra.keymap.buffer")
+local wincursor = require("infra.wincursor")
 local winsplit = require("infra.winsplit")
 
 local amend = require("digits.cmds.amend")
@@ -26,7 +27,7 @@ do
   local function parse_current_entry(winid)
     local line
     do
-      local lnum = assert(api.nvim_win_get_cursor(winid))[1] - 1
+      local lnum = wincursor.lnum(winid)
       local bufnr = api.nvim_win_get_buf(winid)
       line = assert(buflines.line(bufnr, lnum))
       if #line < 1 then return jelly.debug("blank line lnum#%d", lnum) end
@@ -194,7 +195,7 @@ return function(git)
   local bufnr
   do
     local function namefn(nr) return string.format("git://status/%s/%d", fs.basename(git.root), nr) end
-    bufnr = Ephemeral({ namefn = namefn, handyclose = true })
+    bufnr = Ephemeral({ namefn = namefn, handyclose = true, modifiable = false })
   end
 
   local rhs = RHS(git, bufnr)

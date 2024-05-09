@@ -8,37 +8,49 @@ local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.cmds.blame", "info")
 local bufmap = require("infra.keymap.buffer")
 local rifts = require("infra.rifts")
-local strlib = require("infra.strlib")
+local wincursor = require("infra.wincursor")
 
 local create_git = require("digits.create_git")
 local sting = require("sting")
+local ropes = require("string.buffer")
 
 local api = vim.api
 
 ---@param line string
----@return string,string,string,integer,string
+---@return string @obj
+---@return string @author
+---@return string @date 'yyyy-mm-dd'
+---@return integer @row , 1-based
 local function parse_blame(line)
   --samples:
   --* ^d545cdb (haoliang 2018-06-21 1)
   --* 7d03e957 (haoliang 2021-07-01 2) foo bar
   --* 0a39d4af (haoliang          2023-07-28 155)     foo bar
   --* 00000000 (Not Committed Yet 2023-08-15 149)       foo bar
-  local obj, author, date, lnum
-  if string.sub(line, 10, 10) == "(" then
-    obj, author, date, lnum, line = string.match(line, "^%^?(%x+) %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%) ?(.+)$")
-  else
-    obj, author, date, lnum, line = string.match(line, "^%^?(%x+) .+ %((.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)%) ?(.+)$")
-  end
 
-  if not (obj and author and date and lnum and line) then
+  ---i personally prefer this verbose way over one single string.match(pattern)
+  local rope = ropes.new():set(line)
+  local function pos_pre(substr) return assert(string.find(rope:tostring(), substr, 1, true)) - #substr end
+
+  local obj = rope:get(pos_pre(" "))
+  rope:skip(#" ")
+
+  rope:skip(#"(")
+  local in_brace = rope:get(pos_pre(")"))
+  rope:skip(#")")
+
+  local author, date, row = string.match(in_brace, "^(.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)")
+
+  rope:free()
+
+  if not (obj and author and date and row) then
     jelly.err('unable to parse blame line: "%s"', line)
     error("unreachable")
   end
 
-  author = strlib.rstrip(author, " ")
-  lnum = assert(tonumber(lnum))
+  row = assert(tonumber(row))
 
-  return obj, author, date, lnum, line
+  return obj, author, date, row
 end
 
 ---@param git digits.Git
@@ -94,12 +106,8 @@ do
 
     local bufnr = api.nvim_win_get_buf(winid)
 
-    local blame
-    do
-      local lnum = api.nvim_win_get_cursor(winid)[1] - 1
-      blame = seize_blame(git, bufnr, lnum)
-      if blame == nil then return end
-    end
+    local blame = seize_blame(git, bufnr, wincursor.lnum(winid))
+    if blame == nil then return end
 
     local blame_bufnr, blame_len
     do
@@ -132,6 +140,7 @@ do
   ---@return sting.Pickle
   local function blame_to_pickle(bufnr, line)
     local blame = { parse_blame(line) }
+    --NB: pickle.lnum is actually row
     return { bufnr = bufnr, lnum = blame[4], blame = blame }
   end
 
@@ -162,8 +171,7 @@ do
       end
       loclist:feed_vim(true, false)
 
-      local loc_idx = api.nvim_win_get_cursor(winid)[1]
-      ex.eval("ll %d", loc_idx)
+      ex.eval("ll %d", wincursor.row(winid))
     end
 
     --it's really hard to maintain a usable side-by-side aligned via scrollbind'ed of locwin&blamed-buffer

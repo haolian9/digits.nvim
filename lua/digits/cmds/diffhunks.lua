@@ -31,7 +31,7 @@ function M.setloclist(git, winid)
 
   do
     local old = fn.join(git:run(args), "\n")
-    local now = fn.join(buflines.all(bufnr), "\n")
+    local now = buflines.joined(bufnr)
     local shelf = sting.location.shelf(winid, "diffhunks")
     shelf:reset()
     vim.diff(now, old, {

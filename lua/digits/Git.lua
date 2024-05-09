@@ -12,6 +12,8 @@ local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
 
+local ropes = require("string.buffer")
+
 local api = vim.api
 
 ---@class digits.Git
@@ -53,16 +55,19 @@ do
   function resolve_jobspec(jobspec, default_gitcfg)
     if jobspec == nil then jobspec = {} end
 
-    local gitcfg = {}
+    local gitcfg
     do
       local kv = {}
       if default_gitcfg then dictlib.merge(kv, default_gitcfg) end
       if jobspec.configs then dictlib.merge(kv, jobspec.configs) end
 
+      local rope = ropes.new()
       for k, v in pairs(kv) do
         assert(not strlib.find(k, "'") and not strlib.find(v, "'"))
-        table.insert(gitcfg, string.format("'%s=%s'", k, v))
+        rope:putf(" '%s=%s'", k, v)
       end
+
+      gitcfg = rope:skip(#" "):tostring()
     end
 
     local env
@@ -72,7 +77,7 @@ do
       dictlib.merge(kv, mandatory_envs)
 
       assert(kv.GIT_CONFIG_PARAMETERS == nil, "GIT_CONFIG_PARAMETER env conficts with jobspec.configs")
-      kv.GIT_CONFIG_PARAMETERS = table.concat(gitcfg, " ")
+      kv.GIT_CONFIG_PARAMETERS = gitcfg
 
       env = kv
     end
