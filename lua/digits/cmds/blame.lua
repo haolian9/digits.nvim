@@ -30,7 +30,7 @@ local function parse_blame(line)
 
   ---i personally prefer this verbose way over one single string.match(pattern)
   local rope = ropes.new():set(line)
-  local function pos_pre(substr) return assert(string.find(rope:tostring(), substr, 1, true)) - #substr end
+  local function pos_pre(substr) return assert(string.find(rope:get(), substr, 1, true)) - #substr end
 
   local obj = rope:get(pos_pre(" "))
   rope:skip(#" ")

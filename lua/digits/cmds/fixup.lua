@@ -28,42 +28,41 @@ local function find_chosen_hash(bufnr)
   return string.sub(line, 1, 8)
 end
 
-do
-  ---@param git? digits.Git
-  ---@param on_exit? fun() @called after commit did happen
-  ---@param open_hashes_win fun(bufnr: integer): integer @which returns the opened winid
-  local function main(git, on_exit, open_hashes_win)
-    git = git or create_git()
+---@param git? digits.Git
+---@param on_exit? fun() @called after commit did happen
+---@param open_hashes_win fun(bufnr: integer): integer @which returns the opened winid
+local function main(git, on_exit, open_hashes_win)
+  git = git or create_git()
 
-    local bufnr = compose_buf(git)
+  local bufnr = compose_buf(git)
 
-    api.nvim_create_autocmd("BufWipeout", {
-      buffer = bufnr,
-      once = true,
-      callback = function()
-        local hash = find_chosen_hash(bufnr)
-        if hash == nil then return jelly.info("no hash is chosen") end
+  api.nvim_create_autocmd("BufWipeout", {
+    buffer = bufnr,
+    once = true,
+    callback = function()
+      local hash = find_chosen_hash(bufnr)
+      if hash == nil then return jelly.info("no hash is chosen") end
 
-        git:floatterm({ "commit", "--fixup", hash }, { on_exit = on_exit }, { auto_close = false })
-      end,
-    })
+      git:floatterm({ "commit", "--fixup", hash }, { on_exit = on_exit }, { auto_close = false })
+    end,
+  })
 
-    open_hashes_win(bufnr)
-  end
-
-  ---@param git? digits.Git
-  ---@param on_exit? fun() @called after commit did happen
-  function M.floatwin(git, on_exit)
-    main(git, on_exit, function(bufnr) return rifts.open.fragment(bufnr, true, { relative = "editor" }, { width = 0.6, height = 0.8 }) end)
-  end
-
-  ---@param git? digits.Git
-  ---@param on_exit? fun() @called after commit did happen
-  function M.tab(git, on_exit)
-    main(git, on_exit, function(bufnr)
-      ex.eval("tab sbuffer %d", bufnr)
-      return api.nvim_get_current_win()
-    end)
-  end
+  open_hashes_win(bufnr)
 end
+
+---@param git? digits.Git
+---@param on_exit? fun() @called after commit did happen
+function M.floatwin(git, on_exit)
+  main(git, on_exit, function(bufnr) return rifts.open.fragment(bufnr, true, { relative = "editor" }, { width = 0.6, height = 0.8 }) end)
+end
+
+---@param git? digits.Git
+---@param on_exit? fun() @called after commit did happen
+function M.tab(git, on_exit)
+  main(git, on_exit, function(bufnr)
+    ex.eval("tab sbuffer %d", bufnr)
+    return api.nvim_get_current_win()
+  end)
+end
+
 return M

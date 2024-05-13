@@ -15,6 +15,7 @@ local fixup = require("digits.cmds.fixup")
 local push = require("digits.cmds.push")
 local contracts = require("digits.cmds.status.contracts")
 local signals = require("digits.cmds.status.signals")
+local sync = require("digits.cmds.sync")
 local puff = require("puff")
 
 local api = vim.api
@@ -183,6 +184,7 @@ do
   function Impl:fixup() fixup.tab(self.git, signals.reload) end
   function Impl:amend() amend.tab(self.git, signals.reload) end
   function Impl:push() push.tab(self.git) end
+  function Impl:sync() sync.tab(self.git, signals.reload) end
 
   ---@param git digits.Git
   ---@param bufnr integer
@@ -216,6 +218,7 @@ return function(git)
       bm.n("x", function() rhs:clean() end)
       bm.n("X", function() rhs:interactive_clean_all() end)
       bm.n("Y", function() rhs:push() end)
+      bm.n("S", function() rhs:sync() end)
     end
     do
       bm.n("i", function() rhs:edit("edit") end)

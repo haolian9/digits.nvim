@@ -232,6 +232,33 @@ function Git:find_subcmd_in_args(args)
   error("unreachable")
 end
 
+---@return string? remote
+---@return string? branch
+function Git:resolve_upstream()
+  local curbr = assert(self:run({ "branch", "--show-current" })())
+  local output = self:run({ "config", "--get-regexp", string.format([[branch\.%s\.(remote|merge)]], curbr) })
+
+  local remote
+  do
+    remote = output()
+    if remote == nil then return jelly.warn("no upstream remote for local branch %s", curbr) end
+    local prefix = string.format([[branch.%s.remote ]], curbr)
+    assert(strlib.startswith(remote, prefix))
+    remote = string.sub(remote, #prefix + 1)
+  end
+
+  local branch
+  do
+    branch = output()
+    if branch == nil then return jelly.warn("no upstream branch for local branch %s", curbr) end
+    local prefix = string.format([[branch.%s.merge refs/heads/]], curbr)
+    assert(strlib.startswith(branch, prefix))
+    branch = string.sub(branch, #prefix + 1)
+  end
+
+  return remote, branch
+end
+
 ---@param root string
 ---@return digits.Git
 return function(root) return setmetatable({ root = root }, Git) end

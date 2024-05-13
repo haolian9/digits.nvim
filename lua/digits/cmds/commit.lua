@@ -29,7 +29,7 @@ end
 
 ---@param git digits.Git
 ---@param on_exit? fun() @called when the commit command completed
-local function compose_the_buffer(git, on_exit)
+local function compose_buf(git, on_exit)
   local infos = {}
   do
     local status = git:run({ "status" }, { configs = { ["advice.statusHints"] = "false" } })
@@ -69,7 +69,7 @@ end
 ---@param on_exit? fun() @called when the commit command completed
 function M.floatwin(git, on_exit)
   git = git or create_git()
-  local bufnr = compose_the_buffer(git, on_exit)
+  local bufnr = compose_buf(git, on_exit)
   local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
   prefer.wo(winid, "list", false)
 end
@@ -80,7 +80,7 @@ end
 function M.tab(git, on_exit)
   git = git or create_git()
 
-  local bufnr = compose_the_buffer(git, on_exit)
+  local bufnr = compose_buf(git, on_exit)
   ex.eval("tab sbuffer %d", bufnr)
   prefer.wo(api.nvim_get_current_win(), "list", false)
 end
