@@ -24,9 +24,10 @@ provide some git workflows run in nvim
 * [ ] fugitive `Gedit`
       * [x] git show {object}
 * [x] ~~libgit2 instead of git bin~~ i quite satisfied with git bin
-* [x] ~~git commit --fixup~~ just run it in a float term
 * [x] git push when upstream is set for current branch
 * [x] git commit --fixup {hash}
+* [x] git commit --amend
+* [x] git fetch upstream & rebase upstream
 * [ ] floating or not, that is the question
 
 ## status
@@ -36,7 +37,7 @@ provide some git workflows run in nvim
 ## requirements
 * linux
 * git 2.*
-* nvim 0.9.*
+* nvim 0.10.*
 * haolian9/infra.nvim
 * haolian9/puff.nvim
 
