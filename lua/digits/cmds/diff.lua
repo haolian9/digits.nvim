@@ -25,5 +25,5 @@ return function(git, bufnr, cached)
     table.insert(args, path)
   end
 
-  cmdviewer.tab(git, args)
+  cmdviewer.split(git, args, "right")
 end

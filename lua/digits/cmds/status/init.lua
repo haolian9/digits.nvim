@@ -13,9 +13,7 @@ local api = vim.api
 function M.floatwin(git)
   git = git or create_git()
 
-  local bufnr = create_buf(git)
-
-  rifts.open.fragment(bufnr, true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
+  rifts.open.fragment(create_buf(git), true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
 end
 
 ---@param git? digits.Git
@@ -23,30 +21,21 @@ end
 function M.split(git, side)
   git = git or create_git()
 
-  local bufnr = create_buf(git)
-
-  winsplit(side, api.nvim_buf_get_name(bufnr))
-  local winid = api.nvim_get_current_win()
-  api.nvim_win_set_buf(winid, bufnr)
+  winsplit(side, create_buf(git))
 end
 
 ---@param git? digits.Git
 function M.win1000(git)
   git = git or create_git()
 
-  local bufnr = create_buf(git)
-
-  local winid = api.nvim_get_current_win()
-  api.nvim_win_set_buf(winid, bufnr)
+  api.nvim_win_set_buf(0, create_buf(git))
 end
 
 ---@param git? digits.Git
 function M.tab(git)
   git = git or create_git()
 
-  local bufnr = create_buf(git)
-
-  ex.eval("tab sbuffer %d", bufnr)
+  ex.eval("tab sbuffer %d", create_buf(git))
 end
 
 return M
