@@ -1,9 +1,10 @@
 local buflines = require("infra.buflines")
+local bufopen = require("infra.bufopen")
 local ctx = require("infra.ctx")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
-local fn = require("infra.fn")
 local fs = require("infra.fs")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.status", "info")
 local bufmap = require("infra.keymap.buffer")
 local wincursor = require("infra.wincursor")
@@ -50,7 +51,7 @@ do
     do
       local stdout = self.git:run({ "status", "--porcelain=v1", "--ignore-submodules=all" })
       --todo: sort entries based on ss and us for better
-      lines = fn.tolist(stdout)
+      lines = itertools.tolist(stdout)
     end
 
     ctx.modifiable(self.bufnr, function() buflines.replaces_all(self.bufnr, lines) end)
@@ -155,8 +156,8 @@ do
   do
     local function is_landed_win(winid) return api.nvim_win_get_config(winid).relative == "" end
 
-    ---@param edit_cmd 'edit'|'tabedit'|infra.winsplit.Side
-    function Impl:edit(edit_cmd)
+    ---@param open_mode infra.bufopen.Mode
+    function Impl:edit(open_mode)
       local winid = api.nvim_get_current_win()
 
       local target
@@ -171,12 +172,7 @@ do
       --no closing landed window, eg. .win1000()
       if not is_landed_win(winid) then api.nvim_win_close(winid, false) end
 
-      if edit_cmd == "edit" or edit_cmd == "tabedit" then
-        ex(edit_cmd, target)
-      else
-        ---@diagnostic disable-next-line: param-type-mismatch
-        winsplit(edit_cmd, target)
-      end
+      bufopen(open_mode, target)
     end
   end
 
@@ -221,12 +217,10 @@ return function(git)
       bm.n("S", function() rhs:sync() end)
     end
     do
-      bm.n("i", function() rhs:edit("edit") end)
+      bm.n("i", function() rhs:edit("inplace") end)
       bm.n("o", function() rhs:edit("below") end)
-      bm.n("O", function() rhs:edit("above") end)
       bm.n("v", function() rhs:edit("right") end)
-      bm.n("V", function() rhs:edit("left") end)
-      bm.n("t", function() rhs:edit("tabedit") end)
+      bm.n("t", function() rhs:edit("tab") end)
     end
   end
 

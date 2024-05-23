@@ -7,7 +7,7 @@
 
 local M = {}
 
-local fn = require("infra.fn")
+local strlib = require("infra.strlib")
 
 do
   local truth = {
@@ -96,7 +96,7 @@ function M.parse_status_line(line)
     if stage_status ~= "R" then
       path = string.sub(line, 4)
     else
-      local splits = fn.split_iter(string.sub(line, 4), " -> ")
+      local splits = strlib.iter_splits(string.sub(line, 4), " -> ")
       path, renamed_path = splits(), splits()
       assert(path, path)
       assert(renamed_path, renamed_path)

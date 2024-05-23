@@ -3,7 +3,7 @@ local M = {}
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
-local fn = require("infra.fn")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.fixup", "debug")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
@@ -16,7 +16,7 @@ local api = vim.api
 ---@return integer
 local function compose_buf(git)
   local stdout = git:run({ "log", "--oneline", "--abbrev=8", "-n", "20" })
-  local lines = fn.tolist(fn.map(function(line) return "# " .. line end, stdout))
+  local lines = itertools.tolist(itertools.map(function(line) return "# " .. line end, stdout))
   return Ephemeral({ undolevels = 10, modifiable = true, namepat = "git://fixup/{bufnr}" }, lines)
 end
 

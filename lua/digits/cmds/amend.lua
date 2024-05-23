@@ -3,7 +3,7 @@ local M = {}
 local buflines = require("infra.buflines")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
-local fn = require("infra.fn")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.amend", "debug")
 local listlib = require("infra.listlib")
 local prefer = require("infra.prefer")
@@ -45,11 +45,11 @@ local function compose_buf(git, on_exit)
     --todo: merge into `git status`
     listlib.extend(lines, { "#", "# Changes between HEAD~1..HEAD" })
     local diff = git:run({ "diff", "--name-status", "HEAD~1..HEAD" })
-    listlib.extend(lines, fn.map(function(line) return "#   " .. line end, diff))
+    listlib.extend(lines, itertools.map(function(line) return "#   " .. line end, diff))
 
     table.insert(lines, "#")
     local status = git:run({ "status" }, { configs = { ["advice.statusHints"] = "false" } })
-    listlib.extend(lines, fn.map(function(line) return "# " .. line end, status))
+    listlib.extend(lines, itertools.map(function(line) return "# " .. line end, status))
   end
 
   local bufnr = Ephemeral({ undolevels = 10, modifiable = true, namepat = "git://amend/{bufnr}" }, lines)

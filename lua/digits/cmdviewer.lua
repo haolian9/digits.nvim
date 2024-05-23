@@ -2,7 +2,7 @@ local M = {}
 
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
-local fn = require("infra.fn")
+local itertools = require("infra.itertools")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local winsplit = require("infra.winsplit")
@@ -14,7 +14,7 @@ local api = vim.api
 ---@param args string[]
 ---@return integer @bufnr
 function M.fullscreen_floatwin(git, args)
-  local lines = fn.tolist(git:run(args))
+  local lines = itertools.tolist(git:run(args))
 
   local bufnr
   do
@@ -34,7 +34,7 @@ end
 ---@param args string[]
 ---@return integer @bufnr
 function M.tab(git, args)
-  local lines = fn.tolist(git:run(args))
+  local lines = itertools.tolist(git:run(args))
 
   local bufnr
   do
@@ -57,7 +57,7 @@ end
 ---@param side infra.winsplit.Side
 ---@return integer @bufnr
 function M.split(git, args, side)
-  local lines = fn.tolist(git:run(args))
+  local lines = itertools.tolist(git:run(args))
 
   local bufnr
   do

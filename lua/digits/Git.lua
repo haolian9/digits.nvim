@@ -1,10 +1,10 @@
 local augroups = require("infra.augroups")
+local itertools = require("infra.itertools")
 local bufrename = require("infra.bufrename")
 local ctx = require("infra.ctx")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
-local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("digits.Git")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
@@ -109,7 +109,7 @@ do
     local cp = subprocess.run("git", { args = args, cwd = root, env = spawnspec.env, on_exit = spawnspec.on_exit }, capture_stdout)
 
     if cp.exit_code ~= 0 then
-      jelly.err("cmd='%s'; exit code=%d", fn.join(args, " "), cp.exit_code)
+      jelly.err("cmd='%s'; exit code=%d", itertools.join(args, " "), cp.exit_code)
       error("git cmd failed")
     end
 

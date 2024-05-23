@@ -2,8 +2,8 @@ local M = {}
 
 local buflines = require("infra.buflines")
 local bufpath = require("infra.bufpath")
-local fn = require("infra.fn")
 local fs = require("infra.fs")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.diffhunks")
 
 local create_git = require("digits.create_git")
@@ -30,7 +30,7 @@ function M.setloclist(git, winid)
   end
 
   do
-    local old = fn.join(git:run(args), "\n")
+    local old = itertools.join(git:run(args), "\n")
     local now = buflines.joined(bufnr)
     local shelf = sting.location.shelf(winid, "diffhunks")
     shelf:reset()
