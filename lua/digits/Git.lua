@@ -1,10 +1,10 @@
 local augroups = require("infra.augroups")
-local itertools = require("infra.itertools")
 local bufrename = require("infra.bufrename")
 local ctx = require("infra.ctx")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.Git")
 local bufmap = require("infra.keymap.buffer")
 local prefer = require("infra.prefer")
@@ -101,7 +101,7 @@ do
     return { env = env, on_exit = resolved.on_exit }
   end
 
-  ---@param capture_stdout boolean
+  ---@param capture_stdout false|'raw'|'lines'
   ---@param root string
   ---@param args string[]
   ---@param spawnspec digits.GitSpawnSpec
@@ -124,7 +124,7 @@ do
   ---@param jobspec? digits.GitJobSpec
   ---@return fun(): string?
   function Git:run(args, jobspec)
-    local cp = main(true, self.root, args, resolve_spawnspec(jobspec, { ["color.ui"] = "never" }))
+    local cp = main("lines", self.root, args, resolve_spawnspec(jobspec, { ["color.ui"] = "never" }))
 
     return cp.stdout
   end
@@ -217,7 +217,7 @@ end
 ---@return boolean
 function Git:is_tracked(path)
   assert(path ~= nil and path ~= "")
-  local cp = subprocess.run("git", { args = { "ls-files", "--error-unmatch", "--", path }, cwd = self.root }, false)
+  local cp = subprocess.run("git", { args = { "ls-files", "--error-unmatch", "--", path }, cwd = self.root })
   return cp.exit_code == 0
 end
 
