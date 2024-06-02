@@ -39,7 +39,6 @@ function M.Git(root)
 end
 
 return setmetatable(M, {
-  ---@param _ any
   ---@param root? string
   ---@return digits.Git
   __call = function(_, root) return M.Git(root) end,
