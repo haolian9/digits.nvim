@@ -43,10 +43,7 @@ local function parse_blame(line)
 
   rope:free()
 
-  if not (obj and author and date and row) then
-    jelly.err('unable to parse blame line: "%s"', line)
-    error("unreachable")
-  end
+  if not (obj and author and date and row) then return jelly.fatal("ParseError", "unable to parse blame line: '%s'", line) end
 
   row = assert(tonumber(row))
 

@@ -106,12 +106,7 @@ do
   ---@param spawnspec digits.GitSpawnSpec
   local function main(capture_stdout, root, args, spawnspec)
     local cp = subprocess.run("git", { args = args, cwd = root, env = spawnspec.env, on_exit = spawnspec.on_exit }, capture_stdout)
-
-    if cp.exit_code ~= 0 then
-      jelly.err("cmd='%s'; exit code=%d", table.concat(args, " "), cp.exit_code)
-      error("git cmd failed")
-    end
-
+    if cp.exit_code ~= 0 then return jelly.fatal("ProcRunError", "cmd='%s'; exit_code=%d", args, cp.exit_code) end
     return cp
   end
 
