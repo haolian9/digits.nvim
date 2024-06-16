@@ -5,12 +5,11 @@ local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local its = require("infra.its")
 local jelly = require("infra.jellyfish")("digits.cmds.fixup", "debug")
+local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 
 local create_git = require("digits.create_git")
-
-local api = vim.api
 
 ---@param git digits.Git
 ---@return integer
@@ -36,7 +35,7 @@ local function main(git, on_exit, open_hashes_win)
 
   local bufnr = compose_buf(git)
 
-  api.nvim_create_autocmd("BufWipeout", {
+  ni.create_autocmd("BufWipeout", {
     buffer = bufnr,
     once = true,
     callback = function()
@@ -61,7 +60,7 @@ end
 function M.tab(git, on_exit)
   main(git, on_exit, function(bufnr)
     ex.eval("tab sbuffer %d", bufnr)
-    return api.nvim_get_current_win()
+    return ni.get_current_win()
   end)
 end
 

@@ -5,19 +5,18 @@ local bufpath = require("infra.bufpath")
 local fs = require("infra.fs")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.diffhunks")
+local ni = require("infra.ni")
 
 local create_git = require("digits.create_git")
 local sting = require("sting")
-
-local api = vim.api
 
 ---@param git? digits.Git
 ---@param winid? integer
 function M.setloclist(git, winid)
   git = git or create_git()
-  winid = winid or api.nvim_get_current_win()
+  winid = winid or ni.get_current_win()
 
-  local bufnr = api.nvim_win_get_buf(winid)
+  local bufnr = ni.win_get_buf(winid)
 
   local args = { "--no-pager", "show" }
   do

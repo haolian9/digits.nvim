@@ -6,12 +6,11 @@ local ex = require("infra.ex")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.amend", "debug")
 local listlib = require("infra.listlib")
+local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local strlib = require("infra.strlib")
 
 local create_git = require("digits.create_git")
-
-local api = vim.api
 
 ---collect from the first line, until a #-prefixed line
 ---@param bufnr integer
@@ -54,7 +53,7 @@ local function compose_buf(git, on_exit)
 
   local bufnr = Ephemeral({ undolevels = 10, modifiable = true, namepat = "git://amend/{bufnr}" }, lines)
 
-  api.nvim_create_autocmd("BufWipeout", {
+  ni.create_autocmd("BufWipeout", {
     buffer = bufnr,
     once = true,
     callback = function()
@@ -75,7 +74,7 @@ function M.tab(git, on_exit)
   local bufnr = compose_buf(git, on_exit)
 
   ex.eval("tab sbuffer %d", bufnr)
-  prefer.wo(api.nvim_get_current_win(), "list", false)
+  prefer.wo(ni.get_current_win(), "list", false)
 end
 
 return M

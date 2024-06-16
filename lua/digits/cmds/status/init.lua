@@ -1,13 +1,12 @@
 local M = {}
 
 local ex = require("infra.ex")
+local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 local winsplit = require("infra.winsplit")
 
 local create_buf = require("digits.cmds.status.create_buf")
 local create_git = require("digits.create_git")
-
-local api = vim.api
 
 ---@param git? digits.Git
 function M.floatwin(git)
@@ -28,7 +27,7 @@ end
 function M.win1000(git)
   git = git or create_git()
 
-  api.nvim_win_set_buf(0, create_buf(git))
+  ni.win_set_buf(0, create_buf(git))
 end
 
 ---@param git? digits.Git

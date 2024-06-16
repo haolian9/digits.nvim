@@ -3,11 +3,10 @@ local M = {}
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local itertools = require("infra.itertools")
+local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local winsplit = require("infra.winsplit")
-
-local api = vim.api
 
 ---NB: only the stdout is visible, but not stderr
 ---@param git digits.Git
@@ -45,7 +44,7 @@ function M.tab(git, args)
 
   ex.eval("tab sb %d", bufnr)
 
-  local winid = api.nvim_get_current_win()
+  local winid = ni.get_current_win()
   prefer.wo(winid, "list", false)
 
   return bufnr
@@ -67,7 +66,7 @@ function M.split(git, args, side)
   end
 
   winsplit(side, bufnr)
-  local winid = api.nvim_get_current_win()
+  local winid = ni.get_current_win()
   prefer.wo(winid, "list", false)
 
   return bufnr

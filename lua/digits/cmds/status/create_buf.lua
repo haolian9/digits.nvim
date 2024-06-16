@@ -6,8 +6,10 @@ local fs = require("infra.fs")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.status", "info")
 local bufmap = require("infra.keymap.buffer")
+local ni = require("infra.ni")
 local wincursor = require("infra.wincursor")
 
+local beckonize = require("beckon.beckonize")
 local amend = require("digits.cmds.amend")
 local commit = require("digits.cmds.commit")
 local fixup = require("digits.cmds.fixup")
@@ -16,8 +18,6 @@ local contracts = require("digits.cmds.status.contracts")
 local signals = require("digits.cmds.status.signals")
 local sync = require("digits.cmds.sync")
 local puff = require("puff")
-
-local api = vim.api
 
 local RHS
 do
@@ -28,7 +28,7 @@ do
     local line
     do
       local lnum = wincursor.lnum(winid)
-      local bufnr = api.nvim_win_get_buf(winid)
+      local bufnr = ni.win_get_buf(winid)
       line = assert(buflines.line(bufnr, lnum))
       if #line < 1 then return jelly.debug("blank line lnum#%d", lnum) end
       assert(#line >= 4)
@@ -56,7 +56,7 @@ do
   end
 
   function Impl:stage()
-    local winid = api.nvim_get_current_win()
+    local winid = ni.get_current_win()
     local ss, us, path, renamed_path = parse_current_entry(winid)
     if not (ss and us) then return end
     if not contracts.is_stagable(ss, us) then return jelly.debug("not a stagable status; '%s%s'", ss, us) end
@@ -81,7 +81,7 @@ do
 
   do
     function Impl:unstage()
-      local winid = api.nvim_get_current_win()
+      local winid = ni.get_current_win()
       local ss, us, path, renamed_path = parse_current_entry(winid)
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
@@ -94,7 +94,7 @@ do
     end
 
     function Impl:interactive_unstage()
-      local winid = api.nvim_get_current_win()
+      local winid = ni.get_current_win()
       local ss, us, path, renamed_path = parse_current_entry(winid)
       if not (ss and us) then return end
       if not contracts.is_unstagable(ss, us) then return jelly.debug("not an unstagable status; '%s%s'", ss, us) end
@@ -109,7 +109,7 @@ do
   end
 
   function Impl:interactive_stage()
-    local winid = api.nvim_get_current_win()
+    local winid = ni.get_current_win()
     local ss, us, path, renamed_path = parse_current_entry(winid)
     if not contracts.is_interactive_stagable(ss, us) then return jelly.debug("not a interactive-stagable status; '%s%s'", ss, us) end
     if ss ~= "R" then
@@ -122,7 +122,7 @@ do
   function Impl:interactive_stage_all() self.git:floatterm({ "add", "--patch", "." }, { on_exit = signals.reload }, { cbreak = true }) end
 
   function Impl:restore()
-    local winid = api.nvim_get_current_win()
+    local winid = ni.get_current_win()
     local ss, us, path = parse_current_entry(winid)
     if ss == nil then return end
     if ss == "?" and us == "?" then return jelly.debug("not a tracked file") end
@@ -137,7 +137,7 @@ do
   end
 
   function Impl:clean()
-    local winid = api.nvim_get_current_win()
+    local winid = ni.get_current_win()
     local ss, us, path = parse_current_entry(winid)
     if ss == nil then return end
     if not (ss == "?" and us == "?") then return jelly.debug("not a untracked file") end
@@ -152,11 +152,11 @@ do
   function Impl:interactive_clean_all() self.git:floatterm({ "clean", "--interactive", "-d" }, { on_exit = signals.reload }, { cbreak = true }) end
 
   do
-    local function is_landed_win(winid) return api.nvim_win_get_config(winid).relative == "" end
+    local function is_landed_win(winid) return ni.win_get_config(winid).relative == "" end
 
     ---@param open_mode infra.bufopen.Mode
     function Impl:edit(open_mode)
-      local winid = api.nvim_get_current_win()
+      local winid = ni.get_current_win()
 
       local target
       do
@@ -168,7 +168,10 @@ do
       end
 
       --no closing landed window, eg. .win1000()
-      if not is_landed_win(winid) then api.nvim_win_close(winid, false) end
+      if not is_landed_win(winid) then
+        --todo: set current_window explicitly
+        ni.win_close(winid, false)
+      end
 
       bufopen(open_mode, target)
     end
@@ -219,11 +222,12 @@ return function(git)
       bm.n("o", function() rhs:edit("below") end)
       bm.n("v", function() rhs:edit("right") end)
       bm.n("t", function() rhs:edit("tab") end)
+      bm.n("/", function() beckonize(nil, nil, { remember = true }) end)
     end
   end
 
   signals.on_reload(function()
-    if not api.nvim_buf_is_valid(bufnr) then return true end
+    if not ni.buf_is_valid(bufnr) then return true end
     rhs:reload()
   end)
   signals.reload()

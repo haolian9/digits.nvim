@@ -7,14 +7,13 @@ local ex = require("infra.ex")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.cmds.blame", "info")
 local bufmap = require("infra.keymap.buffer")
+local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
 
 local create_git = require("digits.create_git")
 local sting = require("sting")
 local ropes = require("string.buffer")
-
-local api = vim.api
 
 ---@param line string
 ---@return string @obj
@@ -99,9 +98,9 @@ do
   ---@param winid? integer
   function M.line(git, winid)
     git = git or create_git()
-    winid = winid or api.nvim_get_current_win()
+    winid = winid or ni.get_current_win()
 
-    local bufnr = api.nvim_win_get_buf(winid)
+    local bufnr = ni.win_get_buf(winid)
 
     local blame = seize_blame(git, bufnr, wincursor.lnum(winid))
     if blame == nil then return end
@@ -124,8 +123,8 @@ do
     local aug = augroups.BufAugroup(bufnr, true)
     aug:once("CursorMoved", {
       callback = function()
-        if not api.nvim_win_is_valid(blame_winid) then return end
-        api.nvim_win_close(blame_winid, false)
+        if not ni.win_is_valid(blame_winid) then return end
+        ni.win_close(blame_winid, false)
       end,
     })
   end
@@ -150,9 +149,9 @@ do
   ---@param winid? integer
   function M.file(git, winid)
     git = git or create_git()
-    winid = winid or api.nvim_get_current_win()
+    winid = winid or ni.get_current_win()
 
-    local bufnr = api.nvim_win_get_buf(winid)
+    local bufnr = ni.win_get_buf(winid)
 
     local path = resolve_path(git, bufnr)
     if path == nil then return end

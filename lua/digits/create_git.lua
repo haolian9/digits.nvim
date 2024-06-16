@@ -1,11 +1,10 @@
 local M = {}
 
+local ni = require("infra.ni")
 local project = require("infra.project")
 local strlib = require("infra.strlib")
 
 local Git = require("digits.Git")
-
-local api = vim.api
 
 local last_used_root
 
@@ -16,7 +15,7 @@ function M.resolve_root(bufnr)
 
   --todo: recognize the buffers created by digits itself
   if root == nil then
-    local bufname = api.nvim_buf_get_name(bufnr)
+    local bufname = ni.buf_get_name(bufnr)
     if strlib.startswith(bufname, "git://") then root = last_used_root end
   end
 
@@ -33,7 +32,7 @@ end
 ---@param root? string
 ---@return digits.Git
 function M.Git(root)
-  root = root or M.resolve_root(api.nvim_get_current_buf())
+  root = root or M.resolve_root(ni.get_current_buf())
 
   return Git(root)
 end

@@ -1,11 +1,10 @@
 local M = {}
 
 local ex = require("infra.ex")
+local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 
 local create_git = require("digits.create_git")
-
-local api = vim.api
 
 ---@param git? digits.Git
 ---@param open_win fun(bufnr: integer): integer @which returns the opened winid
@@ -40,7 +39,7 @@ end
 function M.tab(git, on_exit)
   return main(git, function(bufnr)
     ex.eval("tab sbuffer %d", bufnr)
-    return api.nvim_get_current_win()
+    return ni.get_current_win()
   end, on_exit)
 end
 
