@@ -71,7 +71,7 @@ do
     end
 
     if ss == "U" and us == "U" then
-      puff.confirm({ prompt = "git.stage.UU", ents = { "处理过合并冲突了", "还没啊" } }, function(confirmed)
+      puff.confirm({ subject = "git.stage.UU", entries = { "处理过合并冲突了", "还没啊" } }, function(confirmed)
         if confirmed then stage() end
       end)
     else
@@ -129,7 +129,7 @@ do
     if ss == "A" then return jelly.debug("not a tracked file") end
     if ss ~= " " then return jelly.info("unstage the file first") end
 
-    puff.confirm({ prompt = "git.restore" }, function(confirmed)
+    puff.confirm({ subject = "git.restore" }, function(confirmed)
       if not confirmed then return end
       self.git:execute({ "restore", "--source=HEAD", "--", path })
       signals.reload()
@@ -142,7 +142,7 @@ do
     if ss == nil then return end
     if not (ss == "?" and us == "?") then return jelly.debug("not a untracked file") end
 
-    puff.confirm({ prompt = "git.clean" }, function(confirmed)
+    puff.confirm({ subject = "git.clean" }, function(confirmed)
       if not confirmed then return end
       self.git:execute({ "clean", "--force", "--", path })
       signals.reload()
