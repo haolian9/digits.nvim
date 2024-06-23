@@ -47,6 +47,8 @@ do
     LANG = "C",
   }
 
+  local rope = ropes.new()
+
   ---@param jobspec? digits.GitJobSpec
   ---@param default_gitcfg? {[string]: string}
   ---@return digits.GitJobSpecResolved
@@ -59,13 +61,12 @@ do
       if default_gitcfg then dictlib.merge(kv, default_gitcfg) end
       if jobspec.configs then dictlib.merge(kv, jobspec.configs) end
 
-      local rope = ropes.new()
       for k, v in pairs(kv) do
         assert(not strlib.find(k, "'") and not strlib.find(v, "'"))
         rope:putf(" '%s=%s'", k, v)
       end
 
-      gitcfg = rope:skip(#" "):tostring()
+      gitcfg = rope:skip(#" "):get()
     end
 
     local env

@@ -15,38 +15,43 @@ local create_git = require("digits.create_git")
 local sting = require("sting")
 local ropes = require("string.buffer")
 
----@param line string
----@return string @obj
----@return string @author
----@return string @date 'yyyy-mm-dd'
----@return integer @row , 1-based
-local function parse_blame(line)
-  --samples:
-  --* ^d545cdb (haoliang 2018-06-21 1)
-  --* 7d03e957 (haoliang 2021-07-01 2) foo bar
-  --* 0a39d4af (haoliang          2023-07-28 155)     foo bar
-  --* 00000000 (Not Committed Yet 2023-08-15 149)       foo bar
+local parse_blame
+do
+  local rope = ropes.new()
 
-  ---i personally prefer this verbose way over one single string.match(pattern)
-  local rope = ropes.new():set(line)
-  local function pos_pre(substr) return assert(string.find(rope:get(), substr, 1, true)) - #substr end
+  ---@param line string
+  ---@return string @obj
+  ---@return string @author
+  ---@return string @date 'yyyy-mm-dd'
+  ---@return integer @row , 1-based
+  function parse_blame(line)
+    --samples:
+    --* ^d545cdb (haoliang 2018-06-21 1)
+    --* 7d03e957 (haoliang 2021-07-01 2) foo bar
+    --* 0a39d4af (haoliang          2023-07-28 155)     foo bar
+    --* 00000000 (Not Committed Yet 2023-08-15 149)       foo bar
 
-  local obj = rope:get(pos_pre(" "))
-  rope:skip(#" ")
+    ---i personally prefer this verbose way over one single string.match(pattern)
+    rope:set(line)
+    local function pos_pre(substr) return assert(string.find(rope:tostring(), substr, 1, true)) - #substr end
 
-  rope:skip(#"(")
-  local in_brace = rope:get(pos_pre(")"))
-  rope:skip(#")")
+    local obj = rope:get(pos_pre(" "))
+    rope:skip(#" ")
 
-  local author, date, row = string.match(in_brace, "^(.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)")
+    rope:skip(#"(")
+    local in_brace = rope:get(pos_pre(")"))
+    rope:skip(#")")
 
-  rope:free()
+    local author, date, row = string.match(in_brace, "^(.+) +(%d%d%d%d%-%d%d%-%d%d) +(%d+)")
 
-  if not (obj and author and date and row) then return jelly.fatal("ParseError", "unable to parse blame line: '%s'", line) end
+    rope:reset()
 
-  row = assert(tonumber(row))
+    if not (obj and author and date and row) then return jelly.fatal("ParseError", "unable to parse blame line: '%s'", line) end
 
-  return obj, author, date, row
+    row = assert(tonumber(row))
+
+    return obj, author, date, row
+  end
 end
 
 ---@param git digits.Git
