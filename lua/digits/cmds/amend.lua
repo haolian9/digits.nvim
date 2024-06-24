@@ -44,11 +44,11 @@ local function compose_buf(git, on_exit)
     --todo: merge into `git status`
     listlib.extend(lines, { "#", "# Changes between HEAD~1..HEAD" })
     local diff = git:run({ "diff", "--name-status", "HEAD~1..HEAD" })
-    listlib.extend(lines, itertools.map(function(line) return "#   " .. line end, diff))
+    listlib.extend(lines, itertools.map(diff, function(line) return "#   " .. line end))
 
     table.insert(lines, "#")
     local status = git:run({ "status" }, { configs = { ["advice.statusHints"] = "false" } })
-    listlib.extend(lines, itertools.map(function(line) return "# " .. line end, status))
+    listlib.extend(lines, itertools.map(status, function(line) return "# " .. line end))
   end
 
   local bufnr = Ephemeral({ undolevels = 10, modifiable = true, namepat = "git://amend/{bufnr}" }, lines)
