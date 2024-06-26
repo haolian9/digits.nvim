@@ -104,6 +104,7 @@ do
   ---@param root string
   ---@param args string[]
   ---@param spawnspec digits.GitSpawnSpec
+  ---@return infra.subprocess.CompletedProc
   local function main(capture_stdout, root, args, spawnspec)
     local cp = subprocess.run("git", { args = args, cwd = root, env = spawnspec.env, on_exit = spawnspec.on_exit }, capture_stdout)
     if cp.exit_code ~= 0 then return jelly.fatal("ProcRunError", "cmd='%s'; exit_code=%d", args, cp.exit_code) end
