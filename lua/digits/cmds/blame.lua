@@ -125,7 +125,7 @@ do
       blame_winid = rifts.open.win(blame_bufnr, false, winopts)
     end
 
-    local aug = augroups.BufAugroup(bufnr, true)
+    local aug = augroups.BufAugroup(bufnr, "gitblame", true)
     aug:once("CursorMoved", {
       callback = function()
         if not ni.win_is_valid(blame_winid) then return end

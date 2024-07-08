@@ -167,7 +167,7 @@ do
     local bufnr = Ephemeral()
     local bufname = string.format("git://%s/%d", self:find_subcmd_in_args(args), bufnr)
 
-    local aug = augroups.BufAugroup(bufnr, true)
+    local aug = augroups.BufAugroup(bufnr, "gitcmd", true)
 
     if termspec.insert then
       aug:once("TermOpen", { callback = startinsert })

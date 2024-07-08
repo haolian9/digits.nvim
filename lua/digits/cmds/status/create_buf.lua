@@ -9,7 +9,6 @@ local bufmap = require("infra.keymap.buffer")
 local ni = require("infra.ni")
 local wincursor = require("infra.wincursor")
 
-local beckonize = require("beckon.beckonize")
 local amend = require("digits.cmds.amend")
 local commit = require("digits.cmds.commit")
 local fixup = require("digits.cmds.fixup")
@@ -222,7 +221,6 @@ return function(git)
       bm.n("o", function() rhs:edit("below") end)
       bm.n("v", function() rhs:edit("right") end)
       bm.n("t", function() rhs:edit("tab") end)
-      bm.n("/", function() beckonize(nil, nil, { remember = true }) end)
     end
   end
 
