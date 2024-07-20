@@ -29,7 +29,7 @@ local strlib = require("infra.strlib")
 ---@param object string
 ---@return string,string? @obj, path
 return function(object)
-  if not strlib.find(object, ":") then return object end
+  if not strlib.contains(object, ":") then return object end
   local obj, path = string.match(object, "^(.*):(.+)$")
   if obj == "" then obj = "HEAD" end
   if path ~= nil then path = vim.fn.expand(path) end

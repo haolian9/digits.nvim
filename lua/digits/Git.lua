@@ -62,7 +62,7 @@ do
       if jobspec.configs then dictlib.merge(kv, jobspec.configs) end
 
       for k, v in pairs(kv) do
-        assert(not strlib.find(k, "'") and not strlib.find(v, "'"))
+        assert(not strlib.contains(k, "'") and not strlib.contains(v, "'"))
         rope:putf(" '%s=%s'", k, v)
       end
 

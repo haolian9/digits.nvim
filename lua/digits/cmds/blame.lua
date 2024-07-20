@@ -114,7 +114,7 @@ do
     do
       local line = string.format("%s %s %s", blame.obj, blame.author, blame.date)
       blame_len = #line
-      blame_bufnr = Ephemeral({ handyclose = true }, { line })
+      blame_bufnr = Ephemeral({namepat = "git://blame/{bufnr}", handyclose = true }, { line })
 
       bufmap(blame_bufnr, "n", "gf", function() require("digits.cmds.show")(git, string.format("%s:%s", blame.obj, blame.path)) end)
     end
