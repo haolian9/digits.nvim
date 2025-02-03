@@ -11,7 +11,7 @@ local winsplit = require("infra.winsplit")
 ---NB: only the stdout is visible, but not stderr
 ---@param git digits.Git
 ---@param args string[]
----@return integer @bufnr
+---@return integer bufnr
 function M.fullscreen_floatwin(git, args)
   local lines = itertools.tolist(git:run(args))
 
@@ -31,7 +31,7 @@ end
 ---NB: only the stdout is visible, but not stderr
 ---@param git digits.Git
 ---@param args string[]
----@return integer @bufnr
+---@return integer bufnr
 function M.tab(git, args)
   local lines = itertools.tolist(git:run(args))
 
@@ -54,7 +54,7 @@ end
 ---@param git digits.Git
 ---@param args string[]
 ---@param side infra.winsplit.Side
----@return integer @bufnr
+---@return integer bufnr
 function M.split(git, args, side)
   local lines = itertools.tolist(git:run(args))
 

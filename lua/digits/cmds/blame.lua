@@ -116,7 +116,7 @@ do
       blame_len = #line
       blame_bufnr = Ephemeral({namepat = "git://blame/{bufnr}", handyclose = true }, { line })
 
-      bufmap(blame_bufnr, "n", "gf", function() require("digits.cmds.show")(git, string.format("%s:%s", blame.obj, blame.path)) end)
+      bufmap(blame_bufnr, "n", "gf", function() require("digits.cmds.show").floatwin(git, string.format("%s:%s", blame.obj, blame.path)) end)
     end
 
     local blame_winid

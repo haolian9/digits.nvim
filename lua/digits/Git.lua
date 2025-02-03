@@ -1,3 +1,5 @@
+local ropes = require("string.buffer")
+
 local augroups = require("infra.augroups")
 local bufrename = require("infra.bufrename")
 local ctx = require("infra.ctx")
@@ -6,13 +8,12 @@ local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local jelly = require("infra.jellyfish")("digits.Git")
 local bufmap = require("infra.keymap.buffer")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local rifts = require("infra.rifts")
 local strlib = require("infra.strlib")
 local subprocess = require("infra.subprocess")
-
-local ropes = require("string.buffer")
 
 ---@class digits.Git
 ---@field root string
@@ -142,6 +143,7 @@ do
   local enter_cbreak_mode
   do
     local keys = {}
+    --no considering A-Z, punctuation
     for code = string.byte("a"), string.byte("z") do
       local char = string.char(code)
       keys[char] = char .. "<cr>"
@@ -180,7 +182,7 @@ do
         nested = true,
         callback = function()
           if vim.v.event.status ~= 0 then return end
-          if termspec.insert then ex("stopinsert") end
+          if termspec.insert then mi.stopinsert() end
           ni.win_close(0, false)
         end,
       })
