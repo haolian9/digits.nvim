@@ -6,6 +6,7 @@ local ctx = require("infra.ctx")
 local dictlib = require("infra.dictlib")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
+local feedkeys = require("infra.feedkeys")
 local jelly = require("infra.jellyfish")("digits.Git")
 local bufmap = require("infra.keymap.buffer")
 local mi = require("infra.mi")
@@ -140,23 +141,6 @@ do
     end
   end
 
-  local enter_cbreak_mode
-  do
-    local keys = {}
-    --no considering A-Z, punctuation
-    for code = string.byte("a"), string.byte("z") do
-      local char = string.char(code)
-      keys[char] = char .. "<cr>"
-    end
-
-    function enter_cbreak_mode(bufnr)
-      local bm = bufmap.wraps(bufnr)
-      for lhs, rhs in pairs(keys) do
-        bm.t(lhs, rhs)
-      end
-    end
-  end
-
   ---as default it shows output of the given cmd in a fullscreen window
   ---@param args string[]
   ---@param jobspec? digits.GitJobSpec
@@ -206,7 +190,18 @@ do
     --since termopen will change the buffer name
     bufrename(bufnr, bufname)
 
-    if termspec.cbreak then enter_cbreak_mode(bufnr) end
+    if termspec.cbreak then
+      aug:repeats("InsertCharPre", {
+        callback = function()
+          --dont repeat this callback itself
+          if vim.v.char == "\r" then return end
+          --i believe with schedule() we can guarantee
+          --the <cr> gets appended at the right timing,
+          --even though feedkeys() works without schedule()
+          vim.schedule(function() feedkeys("<cr>", "n") end)
+        end,
+      })
+    end
   end
 end
 
