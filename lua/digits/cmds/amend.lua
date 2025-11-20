@@ -41,7 +41,6 @@ local function compose_buf(git, on_exit)
       "# with '#' will be ignored, and an empty message aborts the commit.",
     })
 
-    --todo: merge into `git status`
     listlib.extend(lines, { "#", "# Changes between HEAD~1..HEAD" })
     local diff = git:run({ "diff", "--name-status", "HEAD~1..HEAD" })
     listlib.extend(lines, itertools.map(diff, function(line) return "#   " .. line end))

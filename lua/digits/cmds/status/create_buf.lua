@@ -167,10 +167,7 @@ do
       end
 
       --no closing landed window, eg. .win1000()
-      if not is_landed_win(winid) then
-        --todo: set current_window explicitly
-        ni.win_close(winid, false)
-      end
+      if not is_landed_win(winid) then ni.win_close(winid, false) end
 
       bufopen(open_mode, target)
     end

@@ -8,7 +8,6 @@ local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local feedkeys = require("infra.feedkeys")
 local jelly = require("infra.jellyfish")("digits.Git")
-local bufmap = require("infra.keymap.buffer")
 local mi = require("infra.mi")
 local ni = require("infra.ni")
 local prefer = require("infra.prefer")
@@ -183,7 +182,7 @@ do
     do
       table.insert(args, 1, "git")
       ctx.win(winid, function() --ensure doing to the right window
-        vim.fn.termopen(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
+        mi.become_term(args, { cwd = self.root, env = jobspec.env, on_exit = jobspec.on_exit })
       end)
     end
 

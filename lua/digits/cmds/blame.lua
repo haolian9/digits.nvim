@@ -1,5 +1,7 @@
 local M = {}
 
+local ropes = require("string.buffer")
+
 local augroups = require("infra.augroups")
 local bufpath = require("infra.bufpath")
 local Ephemeral = require("infra.Ephemeral")
@@ -7,13 +9,13 @@ local ex = require("infra.ex")
 local fs = require("infra.fs")
 local jelly = require("infra.jellyfish")("digits.cmds.blame", "info")
 local bufmap = require("infra.keymap.buffer")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 local rifts = require("infra.rifts")
 local wincursor = require("infra.wincursor")
 
 local create_git = require("digits.create_git")
 local sting = require("sting")
-local ropes = require("string.buffer")
 
 local parse_blame
 do
@@ -103,7 +105,7 @@ do
   ---@param winid? integer
   function M.line(git, winid)
     git = git or create_git()
-    winid = winid or ni.get_current_win()
+    winid = mi.resolve_winid_param(winid)
 
     local bufnr = ni.win_get_buf(winid)
 
@@ -114,7 +116,7 @@ do
     do
       local line = string.format("%s %s %s", blame.obj, blame.author, blame.date)
       blame_len = #line
-      blame_bufnr = Ephemeral({namepat = "git://blame/{bufnr}", handyclose = true }, { line })
+      blame_bufnr = Ephemeral({ namepat = "git://blame/{bufnr}", handyclose = true }, { line })
 
       bufmap(blame_bufnr, "n", "gf", function() require("digits.cmds.show").floatwin(git, string.format("%s:%s", blame.obj, blame.path)) end)
     end
@@ -154,7 +156,7 @@ do
   ---@param winid? integer
   function M.file(git, winid)
     git = git or create_git()
-    winid = winid or ni.get_current_win()
+    winid = mi.resolve_winid_param(winid)
 
     local bufnr = ni.win_get_buf(winid)
 

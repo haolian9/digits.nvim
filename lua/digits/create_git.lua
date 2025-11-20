@@ -13,7 +13,6 @@ local last_used_root
 function M.resolve_root(bufnr)
   local root = project.git_root(bufnr)
 
-  --todo: recognize the buffers created by digits itself
   if root == nil then
     local bufname = ni.buf_get_name(bufnr)
     if strlib.startswith(bufname, "git://") then root = last_used_root end

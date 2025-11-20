@@ -5,6 +5,7 @@ local bufpath = require("infra.bufpath")
 local fs = require("infra.fs")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("digits.cmds.diffhunks")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 
 local create_git = require("digits.create_git")
@@ -14,7 +15,7 @@ local sting = require("sting")
 ---@param winid? integer
 function M.setloclist(git, winid)
   git = git or create_git()
-  winid = winid or ni.get_current_win()
+  winid = mi.resolve_winid_param(winid)
 
   local bufnr = ni.win_get_buf(winid)
 
