@@ -1,8 +1,8 @@
 provide some git workflows run in nvim
 
 ## design choices
-* git cli is good
-* focus on my personal git workflows
+* git cli is good, prefer it ASAP
+* focus on my personal workflows
 * utilize nvim's infrastructures for more convenient UX
     * tabpage/floatwin, terminal, syntax/{git,gitcommit}
 
@@ -37,7 +37,7 @@ provide some git workflows run in nvim
 ## requirements
 * linux
 * git 2.*
-* nvim 0.10.*
+* nvim 0.11.*
 * haolian9/infra.nvim
 * haolian9/puff.nvim
 
