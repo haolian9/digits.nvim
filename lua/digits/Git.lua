@@ -192,12 +192,10 @@ do
     if termspec.cbreak then
       aug:repeats("InsertCharPre", {
         callback = function()
+          local char = vim.v.char
           --dont repeat this callback itself
-          if vim.v.char == "\r" then return end
-          --i believe with schedule() we can guarantee
-          --the <cr> gets appended at the right timing,
-          --even though feedkeys() works without schedule()
-          vim.schedule(function() feedkeys("<cr>", "n") end)
+          if char == "\r" then return end
+          vim.v.char = char .. "\r"
         end,
       })
     end
