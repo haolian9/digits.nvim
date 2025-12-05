@@ -101,11 +101,11 @@ do
     return Blame(path, lnum, obj, author, date)
   end
 
-  ---@param git? digits.Git
   ---@param winid? integer
-  function M.line(git, winid)
-    git = git or create_git()
+  ---@param git? digits.Git
+  function M.line(winid, git)
     winid = mi.resolve_winid_param(winid)
+    git = git or create_git()
 
     local bufnr = ni.win_get_buf(winid)
 
@@ -118,7 +118,7 @@ do
       blame_len = #line
       blame_bufnr = Ephemeral({ namepat = "git://blame/{bufnr}", handyclose = true }, { line })
 
-      bufmap(blame_bufnr, "n", "gf", function() require("digits.cmds.show").floatwin(git, string.format("%s:%s", blame.obj, blame.path)) end)
+      bufmap(blame_bufnr, "n", "gf", function() require("digits.cmds.show").open("float", string.format("%s:%s", blame.obj, blame.path), git) end)
     end
 
     local blame_winid
@@ -152,11 +152,11 @@ do
     return string.format("%s %s %s|%d|%s", author, date, obj, lnum, line)
   end
 
-  ---@param git? digits.Git
   ---@param winid? integer
-  function M.file(git, winid)
-    git = git or create_git()
+  ---@param git? digits.Git
+  function M.file(winid, git)
     winid = mi.resolve_winid_param(winid)
+    git = git or create_git()
 
     local bufnr = ni.win_get_buf(winid)
 

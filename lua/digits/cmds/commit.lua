@@ -1,6 +1,7 @@
 local M = {}
 
 local buflines = require("infra.buflines")
+local bufopen = require("infra.bufopen")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local jelly = require("infra.jellyfish")("digits.cmds.commit", "info")
@@ -64,24 +65,19 @@ local function compose_buf(git, on_exit)
 end
 
 ---equal to `git commit --verbose`
----@param git? digits.Git
+---@param mode? infra.bufopen.Mode
 ---@param on_exit? fun() @called when the commit command completed
-function M.floatwin(git, on_exit)
+---@param git? digits.Git
+function M.open(mode, on_exit, git)
+  mode = mode or "tab"
   git = git or create_git()
   local bufnr = compose_buf(git, on_exit)
-  local winid = rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
-  prefer.wo(winid, "list", false)
-end
 
----equal to `git commit --verbose`
----@param git? digits.Git
----@param on_exit? fun() @called when the commit command completed
-function M.tab(git, on_exit)
-  git = git or create_git()
-
-  local bufnr = compose_buf(git, on_exit)
-  ex.eval("tab sbuffer %d", bufnr)
-  prefer.wo(ni.get_current_win(), "list", false)
+  if mode == "float" then
+    rifts.open.fullscreen(bufnr, true, { relative = "editor" }, { laststatus3 = true })
+  else
+    bufopen(mode, bufnr)
+  end
 end
 
 return M

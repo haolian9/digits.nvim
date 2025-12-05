@@ -11,9 +11,9 @@ local ni = require("infra.ni")
 local create_git = require("digits.create_git")
 local sting = require("sting")
 
----@param git? digits.Git
 ---@param winid? integer
-function M.setloclist(git, winid)
+---@param git? digits.Git
+function M.setloclist(winid, git)
   git = git or create_git()
   winid = mi.resolve_winid_param(winid)
 

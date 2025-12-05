@@ -1,6 +1,7 @@
 local M = {}
 
 local buflines = require("infra.buflines")
+local bufopen = require("infra.bufopen")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local itertools = require("infra.itertools")
@@ -65,15 +66,15 @@ local function compose_buf(git, on_exit)
   return bufnr
 end
 
+---@param mode? infra.bufopen.Mode
 ---@param git? digits.Git
 ---@param on_exit? fun() @called after commit did happen
-function M.tab(git, on_exit)
+function M.open(mode, on_exit, git)
+  mode = mode or "tab"
   git = git or create_git()
 
   local bufnr = compose_buf(git, on_exit)
-
-  ex.eval("tab sbuffer %d", bufnr)
-  prefer.wo(ni.get_current_win(), "list", false)
+  bufopen(mode, bufnr)
 end
 
 return M

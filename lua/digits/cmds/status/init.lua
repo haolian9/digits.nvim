@@ -1,40 +1,22 @@
 local M = {}
 
-local ex = require("infra.ex")
-local ni = require("infra.ni")
+local bufopen = require("infra.bufopen")
 local rifts = require("infra.rifts")
-local winsplit = require("infra.winsplit")
 
 local create_buf = require("digits.cmds.status.create_buf")
 local create_git = require("digits.create_git")
 
+---@param mode? infra.bufopen.Mode|'float'
 ---@param git? digits.Git
-function M.floatwin(git)
+function M.open(mode, git)
+  mode = mode or "tab"
   git = git or create_git()
 
-  rifts.open.fragment(create_buf(git), true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
-end
-
----@param git? digits.Git
----@param side infra.winsplit.Side
-function M.split(git, side)
-  git = git or create_git()
-
-  winsplit(side, create_buf(git))
-end
-
----@param git? digits.Git
-function M.win1000(git)
-  git = git or create_git()
-
-  ni.win_set_buf(0, create_buf(git))
-end
-
----@param git? digits.Git
-function M.tab(git)
-  git = git or create_git()
-
-  ex.eval("tab sbuffer %d", create_buf(git))
+  if mode == "float" then
+    rifts.open.fragment(create_buf(git), true, { relative = "editor", border = "single" }, { width = 0.6, height = 0.8 })
+  else
+    bufopen(mode, create_buf(git))
+  end
 end
 
 return M

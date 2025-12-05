@@ -173,11 +173,11 @@ do
     end
   end
 
-  function Impl:commit() commit.tab(self.git, signals.reload) end
-  function Impl:fixup() fixup.tab(self.git, signals.reload) end
-  function Impl:amend() amend.tab(self.git, signals.reload) end
-  function Impl:push() push.tab(self.git) end
-  function Impl:sync() sync.tab(self.git, signals.reload) end
+  function Impl:commit() commit.open("tab", signals.reload, self.git) end
+  function Impl:fixup() fixup.open("tab", signals.reload, self.git) end
+  function Impl:amend() amend.open("tab", signals.reload, self.git) end
+  function Impl:push() push.open("tab", self.git) end
+  function Impl:sync() sync.open("tab", signals.reload, self.git) end
 
   ---@param git digits.Git
   ---@param bufnr integer

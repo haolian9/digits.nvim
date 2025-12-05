@@ -1,6 +1,7 @@
 local M = {}
 
 local buflines = require("infra.buflines")
+local bufopen = require("infra.bufopen")
 local Ephemeral = require("infra.Ephemeral")
 local ex = require("infra.ex")
 local its = require("infra.its")
@@ -27,10 +28,11 @@ local function find_chosen_hash(bufnr)
   return string.sub(line, 1, 8)
 end
 
----@param git? digits.Git
+---@param mode? infra.bufopen.Mode|'tab'
 ---@param on_exit? fun() @called after commit did happen
----@param open_hashes_win fun(bufnr: integer): integer @which returns the opened winid
-local function main(git, on_exit, open_hashes_win)
+---@param git? digits.Git
+function M.open(mode, on_exit, git)
+  mode = mode or "tab"
   git = git or create_git()
 
   local bufnr = compose_buf(git)
@@ -46,22 +48,11 @@ local function main(git, on_exit, open_hashes_win)
     end,
   })
 
-  open_hashes_win(bufnr)
-end
-
----@param git? digits.Git
----@param on_exit? fun() @called after commit did happen
-function M.floatwin(git, on_exit)
-  main(git, on_exit, function(bufnr) return rifts.open.fragment(bufnr, true, { relative = "editor" }, { width = 0.6, height = 0.8 }) end)
-end
-
----@param git? digits.Git
----@param on_exit? fun() @called after commit did happen
-function M.tab(git, on_exit)
-  main(git, on_exit, function(bufnr)
-    ex.eval("tab sbuffer %d", bufnr)
-    return ni.get_current_win()
-  end)
+  if mode == "float" then
+    rifts.open.fragment(bufnr, true, { relative = "editor" }, { width = 0.6, height = 0.8 })
+  else
+    bufopen(mode, bufnr)
+  end
 end
 
 return M

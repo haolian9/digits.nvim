@@ -5,10 +5,10 @@ local jelly = require("infra.jellyfish")("digits.cmds.diff", "info")
 local cmdviewer = require("digits.cmdviewer")
 local create_git = require("digits.create_git")
 
----@param git? digits.Git
 ---@param bufnr? integer @nil means diff of whole repo
 ---@param cached? boolean @nil=false
-return function(git, bufnr, cached)
+---@param git? digits.Git
+return function(bufnr, cached, git)
   git = git or create_git()
 
   local args = { "--no-pager", "diff", "HEAD" }
@@ -25,5 +25,5 @@ return function(git, bufnr, cached)
     table.insert(args, path)
   end
 
-  cmdviewer.split(git, args, "right")
+  cmdviewer.open("right", git, args)
 end

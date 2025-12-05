@@ -22,12 +22,12 @@ local function resolve_path(raw)
   return result
 end
 
----@param git? digits.Git
 ---@param n? integer @nil means show whole log
 ---@param path? '%'|'#'|string @special case: %, #. see also digits.parse_object
-return function(git, n, path)
-  git = git or create_git()
+---@param git? digits.Git
+return function(n, path, git)
   path = resolve_path(path)
+  git = git or create_git()
 
   local args = { "--no-pager", "log", "--no-merges", "--oneline" }
   if n ~= nil then listlib.extend(args, { "-n", tostring(n) }) end
@@ -36,7 +36,7 @@ return function(git, n, path)
   --depends on above git args
   local hash_pattern = "^(%x+)"
 
-  local bufnr = cmdviewer.tab(git, args)
+  local bufnr = cmdviewer.open("tab", git, args)
 
   local function rhs_detail()
     local obj
@@ -47,7 +47,7 @@ return function(git, n, path)
       obj = hash
       if path ~= nil then obj = string.format("%s:%s", hash, path) end
     end
-    require("digits.cmds.show").tab(git, obj)
+    require("digits.cmds.show").open("tab", obj, git)
   end
 
   bufmap(bufnr, "n", "gf", rhs_detail)
